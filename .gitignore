@@ -1,0 +1,29 @@
+# Ignore target directory
+/target/
+**/target/
+
+# Ignore Cargo.lock (if you're building a library)
+Cargo.lock
+
+# Ignore generated files
+*.rs.bk
+
+# Ignore IDE/editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.tmp
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore Python virtual environment
+.venv/
+
+# Ignore graphify cache
+**/graphify-out/
+

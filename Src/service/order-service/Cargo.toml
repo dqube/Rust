@@ -1,0 +1,56 @@
+[package]
+name = "order-service"
+version.workspace = true
+edition.workspace = true
+description = "Order microservice — DDD aggregate with gRPC API"
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "order-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel  = { workspace = true }
+ddd-domain         = { workspace = true }
+ddd-application    = { workspace = true }
+ddd-infrastructure = { workspace = true }
+ddd-api            = { workspace = true, features = ["grpc"] }
+
+# gRPC
+tonic       = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web   = { workspace = true }
+prost       = { workspace = true }
+prost-types = { workspace = true }
+
+# Database
+sea-orm = { workspace = true }
+
+# Serialisation
+serde      = { workspace = true }
+serde_json = { workspace = true }
+
+# Telemetry
+tracing               = { workspace = true }
+tracing-subscriber    = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry         = { workspace = true }
+opentelemetry_sdk     = { workspace = true }
+opentelemetry-otlp    = { workspace = true }
+
+# Common
+async-trait = { workspace = true }
+thiserror   = { workspace = true }
+uuid        = { workspace = true }
+chrono      = { workspace = true }
+tokio       = { workspace = true }
+futures     = { workspace = true }
+dotenvy     = { workspace = true }
+inventory   = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

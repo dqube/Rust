@@ -1,0 +1,34 @@
+[package]
+name = "ddd-shared-kernel"
+version.workspace = true
+edition.workspace = true
+description = "Zero-dependency base types and utilities for Domain-Driven Design applications"
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+validation = ["dep:validator", "dep:regex"]
+grpc = ["dep:tonic"]
+jwt = ["dep:jsonwebtoken"]
+config-validation = ["dep:serde_yaml"]
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+uuid        = { workspace = true }
+chrono      = { workspace = true }
+thiserror   = { workspace = true }
+async-trait = { workspace = true }
+tracing     = { workspace = true }
+tokio       = { workspace = true }
+
+# Optional dependencies
+validator    = { workspace = true, optional = true }
+regex        = { workspace = true, optional = true }
+tonic        = { workspace = true, optional = true }
+jsonwebtoken = { workspace = true, optional = true }
+serde_yaml   = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

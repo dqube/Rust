@@ -1,0 +1,23 @@
+[package]
+name = "ddd-domain"
+version.workspace = true
+edition.workspace = true
+description = "DDD building blocks: aggregates, repositories, specifications, policies, domain services"
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+tracing = ["dep:tracing"]
+
+[dependencies]
+ddd-shared-kernel = { workspace = true }
+async-trait = { workspace = true }
+serde       = { workspace = true }
+thiserror   = { workspace = true }
+derive_more = { workspace = true }
+chrono      = { workspace = true }
+tracing     = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

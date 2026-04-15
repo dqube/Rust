@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package product.v1;
+
+message Product {
+  string id          = 1;
+  string sku         = 2;
+  string name        = 3;
+  string description = 4;
+  double price       = 5;
+  uint32 stock       = 6;
+  bool   active      = 7;
+  string created_at  = 8;
+  string updated_at  = 9;
+  uint64 version     = 10;
+  string image_url   = 11;  // empty string when no image has been uploaded
+}
+
+message CreateProductRequest {
+  string sku         = 1;
+  string name        = 2;
+  string description = 3;
+  double price       = 4;
+  uint32 stock       = 5;
+}
+
+message CreateProductResponse {
+  string id = 1;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message ListProductsRequest {
+  uint32 page     = 1;
+  uint32 per_page = 2;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  uint64 total              = 2;
+  uint32 page               = 3;
+  uint32 per_page           = 4;
+}
+
+message UpdateStockRequest {
+  string id    = 1;
+  uint32 stock = 2;
+}
+
+message UpdateStockResponse {}
+
+message DeactivateProductRequest {
+  string id = 1;
+}
+
+message DeactivateProductResponse {}
+
+// ─── Image Upload (presigned URL flow) ───────────────────────────────────────
+//
+// Step 1 — BFF asks product-service for a presigned PUT URL.
+//          Product-service calls the blob storage SDK and returns the URL.
+//          The client uploads the image directly to blob storage (BFF not involved).
+//
+// Step 2 — BFF notifies product-service that the upload succeeded.
+//          Product-service persists image_url on the aggregate.
+
+message RequestImageUploadUrlRequest {
+  string product_id   = 1;
+  string filename     = 2;  // e.g. "hero.jpg"
+  string content_type = 3;  // e.g. "image/jpeg"
+}
+
+message RequestImageUploadUrlResponse {
+  string upload_url      = 1;  // presigned PUT URL
+  uint32 expires_in_secs = 2;  // validity window (e.g. 900)
+}
+
+message ConfirmImageUploadRequest {
+  string product_id = 1;
+  string image_url  = 2;  // public CDN/blob URL after successful PUT
+}
+
+message ConfirmImageUploadResponse {}
+
+service ProductService {
+  rpc CreateProduct            (CreateProductRequest)            returns (CreateProductResponse);
+  rpc GetProduct               (GetProductRequest)               returns (GetProductResponse);
+  rpc ListProducts             (ListProductsRequest)             returns (ListProductsResponse);
+  rpc UpdateStock              (UpdateStockRequest)              returns (UpdateStockResponse);
+  rpc DeactivateProduct        (DeactivateProductRequest)        returns (DeactivateProductResponse);
+  rpc RequestImageUploadUrl    (RequestImageUploadUrlRequest)    returns (RequestImageUploadUrlResponse);
+  rpc ConfirmImageUpload       (ConfirmImageUploadRequest)       returns (ConfirmImageUploadResponse);
+}

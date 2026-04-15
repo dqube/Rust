@@ -1,0 +1,51 @@
+[package]
+name = "admin-bff"
+version.workspace = true
+edition.workspace = true
+description = "Admin BFF — REST gateway proxying product-service gRPC with aggregation and OpenAPI/Scalar"
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "admin-bff"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel = { workspace = true, features = ["jwt"] }
+ddd-bff           = { workspace = true, features = ["axum-response", "jwt"] }
+
+# REST / HTTP
+axum       = { workspace = true }
+tower-http = { workspace = true }
+
+# gRPC client
+tonic       = { workspace = true }
+tonic-prost = { workspace = true }
+prost       = { workspace = true }
+
+# OpenAPI
+utoipa = { workspace = true }
+
+# Serialisation
+serde      = { workspace = true }
+serde_json = { workspace = true }
+
+# Telemetry
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Async / runtime
+tokio   = { workspace = true }
+futures = { workspace = true }
+
+# HTTP client (proxy, aggregation)
+reqwest = { workspace = true }
+
+# Metrics
+dotenvy = { workspace = true }
+
+# Common
+uuid = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }

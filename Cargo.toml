@@ -1,0 +1,113 @@
+[workspace]
+members = [
+    "Src/crates/ddd-shared-kernel",
+    "Src/crates/ddd-domain",
+    "Src/crates/ddd-application",
+    "Src/crates/ddd-infrastructure",
+    "Src/crates/ddd-api",
+    "Src/crates/ddd-bff",
+    "Src/service/order-service",
+    "Src/service/admin-bff",
+    "Src/service/product-service",
+]
+resolver = "2"
+
+# ─── Shared package metadata ──────────────────────────────────────────────────
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+# ─── Centralised dependency versions ─────────────────────────────────────────
+# Every crate in the workspace uses `{ workspace = true }` for these.
+# To add extra features beyond the workspace default a crate can write:
+#   dep = { workspace = true, features = ["extra"] }
+# To make a dep optional in a specific crate:
+#   dep = { workspace = true, optional = true }
+[workspace.dependencies]
+
+# ── Internal crates ───────────────────────────────────────────────────────────
+ddd-shared-kernel  = { path = "Src/crates/ddd-shared-kernel",  version = "0.1" }
+ddd-domain         = { path = "Src/crates/ddd-domain",        version = "0.1" }
+ddd-application    = { path = "Src/crates/ddd-application",   version = "0.1" }
+ddd-infrastructure = { path = "Src/crates/ddd-infrastructure", version = "0.1" }
+ddd-api            = { path = "Src/crates/ddd-api",           version = "0.1" }
+ddd-bff            = { path = "Src/crates/ddd-bff",           version = "0.1" }
+
+# ── Serialisation ─────────────────────────────────────────────────────────────
+serde      = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# ── Async runtime ─────────────────────────────────────────────────────────────
+# features = union of all per-crate needs; individual crates may add more.
+tokio        = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time", "net"] }
+tokio-stream = "0.1"
+tokio-util   = "0.7"
+futures      = "0.3"
+
+# ── Error handling & utilities ────────────────────────────────────────────────
+thiserror   = "2.0"
+async-trait = "0.1"
+
+# ── Tracing / logging ─────────────────────────────────────────────────────────
+tracing               = "0.1"
+tracing-subscriber    = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+tracing-opentelemetry = "0.32"
+
+# ── OpenTelemetry ─────────────────────────────────────────────────────────────
+opentelemetry                      = { version = "0.31", features = ["trace"] }
+opentelemetry_sdk                  = { version = "0.31", features = ["rt-tokio", "trace"] }
+opentelemetry-otlp                 = { version = "0.31", features = ["trace", "grpc-tonic"] }
+opentelemetry-semantic-conventions = "0.31"
+
+# ── gRPC ──────────────────────────────────────────────────────────────────────
+tonic            = { version = "0.14", features = ["tls-ring", "tls-webpki-roots", "gzip", "channel", "transport"] }
+tonic-prost      = "0.14"
+tonic-web        = "0.14"
+tonic-build      = "0.14"
+tonic-prost-build = "0.14"
+prost         = "0.14"
+prost-types   = "0.14"
+prost-reflect = { version = "0.16", features = ["serde"] }
+
+# ── REST / HTTP ───────────────────────────────────────────────────────────────
+axum             = { version = "0.8", features = ["macros", "tracing", "json"] }
+tower            = { version = "0.5", features = ["util"] }
+tower-http       = { version = "0.6", features = ["cors", "trace", "request-id", "propagate-header", "compression-full", "catch-panic", "timeout"] }
+http             = "1.4"
+http-body-util   = "0.1"
+hyper            = { version = "1",   features = ["server", "http1", "http2"] }
+hyper-util       = { version = "0.1", features = ["tokio", "server", "server-auto", "http1", "http2"] }
+reqwest          = { version = "0.13", features = ["json"] }
+bytes            = "1"
+matchit          = "0.9"
+pin-project-lite = "0.2"
+
+# ── OpenAPI ───────────────────────────────────────────────────────────────────
+utoipa        = { version = "5.4", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-scalar = { version = "0.3", features = ["axum"] }
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sea-orm    = { version = "1.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-uuid", "with-json"] }
+sqlx       = { version = "0.8",  features = ["runtime-tokio-rustls", "postgres", "uuid", "json", "chrono", "migrate"] }
+async-nats = "0.47"
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+prometheus  = "0.14"
+lazy_static = "1.5"
+once_cell   = "1"
+
+# ── Common utilities ──────────────────────────────────────────────────────────
+uuid        = { version = "1.23", features = ["v7", "serde"] }
+chrono      = { version = "0.4", features = ["serde"] }
+inventory   = "0.3"
+rustc-hash  = "2"
+derive_more = { version = "2.1", features = ["display", "from", "constructor"] }
+dotenvy     = "0.15"
+validator   = { version = "0.20", features = ["derive"] }
+regex       = "1"
+
+# ── Auth / JWT ────────────────────────────────────────────────────────────────
+jsonwebtoken = "9"

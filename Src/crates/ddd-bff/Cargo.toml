@@ -1,0 +1,91 @@
+[package]
+name = "ddd-bff"
+version.workspace = true
+edition.workspace = true
+description = "Reusable building blocks for Backend-for-Frontend gateways: REST→gRPC transcoding, resilience, observability, problem details, graceful shutdown."
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["fixture-descriptor"]
+
+## Implements `axum::response::IntoResponse` for `ProblemDetail` and adds
+## `utoipa::ToSchema` derives on `ProblemDetail`/`FieldViolation`.
+## Also enables the `IntoProblem` / `GrpcIntoProblem` convenience traits,
+## the axum observability middleware, the Prometheus metrics handler,
+## the generic OpenAPI router + spec merge utilities, and the HTTP proxy.
+## Enable this in BFF services that use axum as their REST layer.
+axum-response = ["dep:axum", "dep:utoipa", "dep:utoipa-scalar", "dep:reqwest"]
+
+## Enables JWT bearer-token validation for BFF routes. Depends on the
+## `axum-response` feature (the middleware is axum-based) and re-uses the
+## generic `JwtValidator` from `ddd-shared-kernel`.
+jwt = ["axum-response", "ddd-shared-kernel/jwt"]
+
+## Bundles `proto/fixture.proto` as an embedded descriptor so the transcode
+## layer has a working fallback pool out-of-the-box. Default on for ergonomic
+## development and tests.  Production consumers that always `install()` their
+## own descriptor pool can disable this to drop ~2 KB of embedded bytes and
+## skip the build-script proto compilation.
+fixture-descriptor = []
+
+[dependencies]
+ddd-shared-kernel = { workspace = true, features = ["config-validation"] }
+
+# Optional axum / OpenAPI support (enabled by `axum-response` feature)
+axum          = { workspace = true, optional = true }
+utoipa        = { workspace = true, optional = true }
+utoipa-scalar = { workspace = true, optional = true }
+reqwest       = { workspace = true, optional = true }
+
+# gRPC client
+tonic         = { workspace = true }
+tonic-prost   = { workspace = true }
+prost         = { workspace = true }
+prost-types   = { workspace = true }
+prost-reflect = { workspace = true }
+
+# Serialisation
+serde      = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Routing
+matchit = { workspace = true }
+
+# HTTP edge
+hyper          = { workspace = true }
+hyper-util     = { workspace = true }
+http-body-util = { workspace = true }
+tower          = { workspace = true }
+
+# Telemetry
+tracing = { workspace = true }
+
+# Metrics
+prometheus  = { workspace = true }
+lazy_static = { workspace = true }
+
+# Async / runtime
+tokio        = { workspace = true }
+tokio-stream = { workspace = true }
+futures      = { workspace = true }
+tokio-util   = { workspace = true }
+
+# Common
+http             = { workspace = true }
+async-trait      = { workspace = true }
+thiserror        = { workspace = true }
+uuid             = { workspace = true }
+chrono           = { workspace = true }
+pin-project-lite = { workspace = true }
+bytes            = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

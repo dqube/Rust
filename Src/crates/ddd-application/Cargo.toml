@@ -1,0 +1,36 @@
+[package]
+name = "ddd-application"
+version.workspace = true
+edition.workspace = true
+description = "Application-layer building blocks: CQRS, validation, unit of work, ports, use cases"
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+tracing    = ["dep:tracing"]
+validation = ["dep:validator"]
+testing    = []
+
+[dependencies]
+ddd-shared-kernel = { workspace = true }
+async-trait = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+thiserror   = { workspace = true }
+futures     = { workspace = true }
+chrono      = { workspace = true }
+uuid        = { workspace = true }
+inventory   = { workspace = true }
+rustc-hash  = { workspace = true }
+tracing     = { workspace = true, optional = true }
+validator   = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio  = { workspace = true, features = ["full"] }
+chrono = { workspace = true }
+uuid   = { workspace = true }
+
+[[example]]
+name = "in_memory_fakes"
+required-features = ["testing"]

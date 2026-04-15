@@ -1,0 +1,46 @@
+[package]
+name = "ddd-infrastructure"
+version.workspace = true
+edition.workspace = true
+description = "Infrastructure adapters for DDD microservices: SeaORM, NATS, OpenTelemetry, Prometheus"
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default   = ["postgres", "nats", "telemetry"]
+full      = ["postgres", "nats", "telemetry"]
+postgres  = []
+nats      = []
+telemetry = []
+
+[dependencies]
+ddd-shared-kernel = { workspace = true }
+ddd-application   = { workspace = true }
+
+async-trait = { workspace = true }
+sea-orm     = { workspace = true }
+sqlx        = { workspace = true }
+async-nats  = { workspace = true }
+
+tracing                            = { workspace = true }
+tracing-subscriber                 = { workspace = true }
+tracing-opentelemetry              = { workspace = true }
+opentelemetry                      = { workspace = true }
+opentelemetry_sdk                  = { workspace = true }
+opentelemetry-otlp                 = { workspace = true }
+opentelemetry-semantic-conventions = { workspace = true }
+
+prometheus  = { workspace = true }
+lazy_static = { workspace = true }
+once_cell   = { workspace = true }
+
+serde      = { workspace = true }
+serde_json = { workspace = true }
+chrono     = { workspace = true }
+uuid       = { workspace = true }
+thiserror  = { workspace = true }
+futures    = { workspace = true }
+tokio      = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

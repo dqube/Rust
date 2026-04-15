@@ -1,0 +1,41 @@
+[package]
+name = "product-service"
+version.workspace = true
+edition.workspace = true
+description = "Product catalog microservice — gRPC-only"
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "product-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel = { workspace = true }
+ddd-domain        = { workspace = true }
+ddd-application   = { workspace = true }
+ddd-api           = { workspace = true, features = ["grpc"] }
+
+# gRPC
+tonic     = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web = { workspace = true }
+prost     = { workspace = true }
+
+# Serde / common
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait        = { workspace = true }
+thiserror          = { workspace = true }
+uuid               = { workspace = true }
+chrono             = { workspace = true }
+tokio              = { workspace = true }
+inventory          = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }

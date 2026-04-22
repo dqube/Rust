@@ -77,6 +77,7 @@ pub struct ServiceUrls {
     pub product_service: String,
     pub shared_service: String,
     pub auth_service: String,
+    pub customer_service: String,
 }
 
 impl AdminBffConfig {
@@ -127,6 +128,7 @@ impl AdminBffConfig {
                 product_service: "http://localhost:50052".into(),
                 shared_service: "http://localhost:50053".into(),
                 auth_service: "http://localhost:50054".into(),
+                customer_service: "http://localhost:50055".into(),
             },
             auth: AuthConfig {
                 secret: String::new(),
@@ -161,6 +163,11 @@ impl Validate for AdminBffConfig {
         );
         validate_http_url("services.shared_service", &self.services.shared_service, report);
         validate_http_url("services.auth_service", &self.services.auth_service, report);
+        validate_http_url(
+            "services.customer_service",
+            &self.services.customer_service,
+            report,
+        );
 
         // JWT: only enforce when auth is enabled (secret present).
         if !self.auth.secret.is_empty() {
@@ -220,6 +227,7 @@ struct ServicesFile {
     product_service: Option<String>,
     shared_service: Option<String>,
     auth_service: Option<String>,
+    customer_service: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -312,6 +320,9 @@ fn overlay_file(cfg: &mut AdminBffConfig, f: ConfigFile) {
     if let Some(v) = f.services.auth_service {
         cfg.services.auth_service = v;
     }
+    if let Some(v) = f.services.customer_service {
+        cfg.services.customer_service = v;
+    }
     if let Some(v) = f.resilience.timeout_ms {
         cfg.bff.resilience.timeout = Duration::from_millis(v);
     }
@@ -371,6 +382,7 @@ fn apply_env_layer(cfg: &mut AdminBffConfig, report: &mut Report) {
     apply_str("PRODUCT_SERVICE_URL", |v| cfg.services.product_service = v);
     apply_str("SHARED_SERVICE_URL", |v| cfg.services.shared_service = v);
     apply_str("AUTH_SERVICE_URL", |v| cfg.services.auth_service = v);
+    apply_str("CUSTOMER_SERVICE_URL", |v| cfg.services.customer_service = v);
 
     apply_parse::<u64>("GRPC_TIMEOUT_MS", report, |v| {
         cfg.bff.resilience.timeout = Duration::from_millis(v)

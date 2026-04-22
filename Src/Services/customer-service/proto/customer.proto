@@ -1,0 +1,355 @@
+syntax = "proto3";
+
+package customer.v1;
+
+// Customer microservice — gRPC only. REST is handled by the BFF layer, so
+// no HTTP annotations live on these RPCs. File uploads use the workspace
+// presigned-URL pattern (request URL → client PUTs → confirm) rather than
+// embedding bytes in the RPC.
+
+service CustomerService {
+  // ── Customer CRUD ─────────────────────────────────────────────────────
+  rpc CreateCustomer        (CreateCustomerRequest)        returns (CreateCustomerResponse);
+  rpc GetCustomer           (GetCustomerRequest)           returns (GetCustomerResponse);
+  rpc GetCustomerByUserId   (GetCustomerByUserIdRequest)   returns (GetCustomerResponse);
+  rpc ListCustomers         (ListCustomersRequest)         returns (ListCustomersResponse);
+  rpc UpdateCustomerInfo    (UpdateCustomerInfoRequest)    returns (Empty);
+  rpc EnsureCustomerProfile (EnsureCustomerProfileRequest) returns (EnsureCustomerProfileResponse);
+
+  // ── Loyalty ───────────────────────────────────────────────────────────
+  rpc AddLoyaltyPoints    (AddLoyaltyPointsRequest)    returns (AddLoyaltyPointsResponse);
+  rpc RedeemLoyaltyPoints (RedeemLoyaltyPointsRequest) returns (AddLoyaltyPointsResponse);
+
+  // ── Addresses ─────────────────────────────────────────────────────────
+  rpc AddCustomerAddress         (AddCustomerAddressRequest)         returns (AddCustomerAddressResponse);
+  rpc UpdateCustomerAddress      (UpdateCustomerAddressRequest)      returns (Empty);
+  rpc RemoveCustomerAddress      (RemoveCustomerAddressRequest)      returns (Empty);
+  rpc SetDefaultCustomerAddress  (SetDefaultCustomerAddressRequest)  returns (Empty);
+
+  // ── Avatar (presigned) ────────────────────────────────────────────────
+  rpc RequestAvatarUploadUrl (RequestAvatarUploadUrlRequest) returns (RequestAvatarUploadUrlResponse);
+  rpc ConfirmAvatarUpload    (ConfirmAvatarUploadRequest)    returns (Empty);
+  rpc GetCustomerAvatarUrl   (GetCustomerAvatarUrlRequest)   returns (GetCustomerAvatarUrlResponse);
+
+  // ── Profile & KYC ─────────────────────────────────────────────────────
+  rpc CreateCustomerProfile         (CreateCustomerProfileRequest)         returns (CreateCustomerProfileResponse);
+  rpc GetCustomerProfile            (GetCustomerProfileRequest)            returns (GetCustomerProfileResponse);
+  rpc UpdateCustomerProfile         (UpdateCustomerProfileRequest)         returns (Empty);
+  rpc UpdateNotificationPreferences (UpdateNotificationPreferencesRequest) returns (Empty);
+  rpc SubmitKycDocument             (SubmitKycDocumentRequest)             returns (SubmitKycDocumentResponse);
+  rpc RequestKycDocumentUploadUrl   (RequestKycDocumentUploadUrlRequest)   returns (RequestKycDocumentUploadUrlResponse);
+  rpc SubmitForKycReview            (SubmitForKycReviewRequest)            returns (Empty);
+  rpc VerifyKyc                     (VerifyKycRequest)                     returns (VerifyKycResponse);
+  rpc RejectKyc                     (RejectKycRequest)                     returns (RejectKycResponse);
+
+  // ── Wishlist ──────────────────────────────────────────────────────────
+  rpc GetWishlist        (GetWishlistRequest)        returns (GetWishlistResponse);
+  rpc AddToWishlist      (AddToWishlistRequest)      returns (AddToWishlistResponse);
+  rpc RemoveFromWishlist (RemoveFromWishlistRequest) returns (RemoveFromWishlistResponse);
+  rpc ClearWishlist      (ClearWishlistRequest)      returns (Empty);
+}
+
+message Empty {}
+
+// ── Shared child messages ────────────────────────────────────────────────────
+
+message CustomerAddressMessage {
+  string address_id   = 1;
+  string label        = 2;
+  string line1        = 3;
+  string line2        = 4;
+  string city         = 5;
+  string state        = 6;
+  string postal_code  = 7;
+  string country_code = 8;
+  bool   is_default   = 9;
+}
+
+message CustomerSummary {
+  string customer_id          = 1;
+  string user_id              = 2;
+  string first_name           = 3;
+  string last_name            = 4;
+  string email                = 5;
+  string membership_number    = 6;
+  string country_code         = 7;
+  int32  loyalty_points       = 8;
+  bool   is_membership_active = 9;
+  string phone                = 10;
+  repeated CustomerAddressMessage addresses = 11;
+}
+
+// ── Customer CRUD ────────────────────────────────────────────────────────────
+
+message CreateCustomerRequest {
+  string first_name   = 1;
+  string last_name    = 2;
+  string country_code = 3;
+  string email        = 4;
+  string user_id      = 5; // optional — empty => generated
+}
+
+message CreateCustomerResponse {
+  string customer_id       = 1;
+  string membership_number = 2;
+}
+
+message GetCustomerRequest        { string customer_id = 1; }
+message GetCustomerByUserIdRequest { string user_id    = 1; }
+
+message GetCustomerResponse {
+  bool            found    = 1;
+  CustomerSummary customer = 2;
+}
+
+message ListCustomersRequest {
+  uint32 page         = 1;
+  uint32 per_page     = 2;
+  string search       = 3;
+  string country_code = 4;
+}
+
+message ListCustomersResponse {
+  repeated CustomerSummary items       = 1;
+  uint64                   total       = 2;
+  uint32                   page        = 3;
+  uint32                   per_page    = 4;
+  uint32                   total_pages = 5;
+}
+
+message UpdateCustomerInfoRequest {
+  string customer_id = 1;
+  string first_name  = 2;
+  string last_name   = 3;
+  string phone       = 4;
+}
+
+message EnsureCustomerProfileRequest {
+  string user_id    = 1;
+  string first_name = 2;
+  string last_name  = 3;
+  string email      = 4;
+}
+
+message EnsureCustomerProfileResponse {
+  string customer_id = 1;
+}
+
+// ── Loyalty ──────────────────────────────────────────────────────────────────
+
+message AddLoyaltyPointsRequest {
+  string customer_id = 1;
+  int32  points      = 2;
+  string reason      = 3;
+}
+message RedeemLoyaltyPointsRequest {
+  string customer_id = 1;
+  int32  points      = 2;
+  string reason      = 3;
+}
+message AddLoyaltyPointsResponse {
+  int32 total_points = 1;
+}
+
+// ── Addresses ────────────────────────────────────────────────────────────────
+
+message AddCustomerAddressRequest {
+  string customer_id  = 1;
+  string label        = 2;
+  string line1        = 3;
+  string line2        = 4;
+  string city         = 5;
+  string state        = 6;
+  string postal_code  = 7;
+  string country_code = 8;
+  bool   is_default   = 9;
+}
+
+message AddCustomerAddressResponse {
+  string address_id = 1;
+}
+
+message UpdateCustomerAddressRequest {
+  string customer_id  = 1;
+  string address_id   = 2;
+  string label        = 3;
+  string line1        = 4;
+  string line2        = 5;
+  string city         = 6;
+  string state        = 7;
+  string postal_code  = 8;
+  string country_code = 9;
+}
+
+message RemoveCustomerAddressRequest {
+  string customer_id = 1;
+  string address_id  = 2;
+}
+
+message SetDefaultCustomerAddressRequest {
+  string customer_id = 1;
+  string address_id  = 2;
+}
+
+// ── Avatar ───────────────────────────────────────────────────────────────────
+
+message RequestAvatarUploadUrlRequest {
+  string customer_id  = 1;
+  string filename     = 2;
+  string content_type = 3;
+}
+
+message RequestAvatarUploadUrlResponse {
+  string upload_url      = 1;
+  string object_key      = 2;
+  int64  expires_in_secs = 3;
+}
+
+message ConfirmAvatarUploadRequest {
+  string customer_id = 1;
+  string object_key  = 2;
+}
+
+message GetCustomerAvatarUrlRequest { string customer_id = 1; }
+
+message GetCustomerAvatarUrlResponse {
+  bool   has_avatar = 1;
+  string avatar_url = 2;
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+
+message CreateCustomerProfileRequest {
+  string customer_id                 = 1;
+  string preferred_language          = 2;
+  string preferred_currency          = 3;
+  string date_of_birth               = 4; // ISO "YYYY-MM-DD", empty => none
+  int32  gender                      = 5; // 0 => none; else 1..5 see enum
+  bool   has_gender                  = 6;
+  string tax_id                      = 7;
+  string company_registration_number = 8;
+  bool   email_notifications         = 9;
+  bool   sms_notifications            = 10;
+  bool   push_notifications           = 11;
+  bool   marketing_emails             = 12;
+}
+
+message CreateCustomerProfileResponse {
+  string profile_id  = 1;
+  string customer_id = 2;
+}
+
+message GetCustomerProfileRequest { string customer_id = 1; }
+
+message GetCustomerProfileResponse {
+  bool   found              = 1;
+  string profile_id         = 2;
+  string customer_id        = 3;
+  string kyc_status         = 4;
+  string preferred_language = 5;
+  string preferred_currency = 6;
+  int32  kyc_document_count = 7;
+}
+
+message UpdateCustomerProfileRequest {
+  string customer_id                 = 1;
+  string date_of_birth               = 2; // empty => unchanged
+  int32  gender                      = 3;
+  bool   has_gender                  = 4;
+  string preferred_language          = 5;
+  string preferred_currency          = 6;
+  string tax_id                      = 7;
+  string company_registration_number = 8;
+}
+
+message UpdateNotificationPreferencesRequest {
+  string customer_id         = 1;
+  bool   email_notifications = 2;
+  bool   sms_notifications   = 3;
+  bool   push_notifications  = 4;
+  bool   marketing_emails    = 5;
+}
+
+message SubmitKycDocumentRequest {
+  string customer_id     = 1;
+  string document_type   = 2;
+  string document_number = 3;
+  string file_url        = 4; // must have been uploaded out-of-band
+}
+
+message SubmitKycDocumentResponse {
+  string kyc_status     = 1;
+  int32  document_count = 2;
+}
+
+message RequestKycDocumentUploadUrlRequest {
+  string customer_id   = 1;
+  string document_type = 2;
+  string filename      = 3;
+  string content_type  = 4;
+}
+
+message RequestKycDocumentUploadUrlResponse {
+  string upload_url      = 1;
+  string object_key      = 2;
+  int64  expires_in_secs = 3;
+}
+
+message SubmitForKycReviewRequest { string customer_id = 1; }
+
+message VerifyKycRequest {
+  string customer_id = 1;
+  string verified_by = 2;
+}
+
+message VerifyKycResponse {
+  string kyc_status      = 1;
+  string kyc_verified_at = 2;
+}
+
+message RejectKycRequest {
+  string customer_id      = 1;
+  string rejection_reason = 2;
+  string rejected_by      = 3;
+}
+
+message RejectKycResponse { string kyc_status = 1; }
+
+// ── Wishlist ─────────────────────────────────────────────────────────────────
+
+message WishlistItemMessage {
+  string id           = 1;
+  string customer_id  = 2;
+  string product_id   = 3;
+  string product_name = 4;
+  double base_price   = 5;
+  string added_at     = 6;
+}
+
+message GetWishlistRequest { string customer_id = 1; }
+
+message GetWishlistResponse {
+  repeated WishlistItemMessage items = 1;
+}
+
+message AddToWishlistRequest {
+  string customer_id  = 1;
+  string product_id   = 2;
+  string product_name = 3;
+  double base_price   = 4;
+}
+
+message AddToWishlistResponse {
+  string id         = 1;
+  string product_id = 2;
+  string added_at   = 3;
+}
+
+message RemoveFromWishlistRequest {
+  string customer_id = 1;
+  string product_id  = 2;
+}
+
+message RemoveFromWishlistResponse { bool removed = 1; }
+
+message ClearWishlistRequest { string customer_id = 1; }

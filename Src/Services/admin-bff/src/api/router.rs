@@ -14,6 +14,7 @@ use crate::api::openapi_routes::API_ROUTES;
 use crate::api::rest::auth;
 use crate::api::rest::batch_orders::batch_get_orders;
 use crate::api::rest::catalog_summary::get_catalog_summary;
+use crate::api::rest::customers;
 use crate::api::rest::orders;
 use crate::api::rest::products;
 use crate::api::rest::shared;
@@ -86,6 +87,39 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/shared/pincodes/{code}/deactivate", put(shared::deactivate_pincode))
         .route("/admin/shared/cities/{code}/pincodes", get(shared::list_pincodes_by_city));
 
+    // Customer CRUD, loyalty, addresses, avatar, profile/KYC, wishlist
+    let customer_routes = Router::new()
+        // CRUD
+        .route("/admin/customers", post(customers::create_customer).get(customers::list_customers))
+        .route("/admin/customers/ensure", post(customers::ensure_customer_profile))
+        .route("/admin/customers/by-user/{user_id}", get(customers::get_customer_by_user_id))
+        .route("/admin/customers/{id}", get(customers::get_customer))
+        .route("/admin/customers/{id}/info", put(customers::update_customer_info))
+        // Loyalty
+        .route("/admin/customers/{id}/loyalty/add", post(customers::add_loyalty_points))
+        .route("/admin/customers/{id}/loyalty/redeem", post(customers::redeem_loyalty_points))
+        // Addresses
+        .route("/admin/customers/{id}/addresses", post(customers::add_customer_address))
+        .route("/admin/customers/{id}/addresses/{address_id}", put(customers::update_customer_address).delete(customers::remove_customer_address))
+        .route("/admin/customers/{id}/addresses/{address_id}/set-default", put(customers::set_default_customer_address))
+        // Avatar
+        .route("/admin/customers/{id}/avatar-upload-url", post(customers::request_avatar_upload_url))
+        .route("/admin/customers/{id}/confirm-avatar", post(customers::confirm_avatar_upload))
+        .route("/admin/customers/{id}/avatar-url", get(customers::get_customer_avatar_url))
+        // Profile
+        .route("/admin/customers/{id}/profile", post(customers::create_customer_profile).get(customers::get_customer_profile).put(customers::update_customer_profile))
+        .route("/admin/customers/{id}/profile/notifications", put(customers::update_notification_preferences))
+        // KYC
+        .route("/admin/customers/{id}/kyc/documents", post(customers::submit_kyc_document))
+        .route("/admin/customers/{id}/kyc/document-upload-url", post(customers::request_kyc_document_upload_url))
+        .route("/admin/customers/{id}/kyc/submit-review", post(customers::submit_for_kyc_review))
+        .route("/admin/customers/{id}/kyc/verify", post(customers::verify_kyc))
+        .route("/admin/customers/{id}/kyc/reject", post(customers::reject_kyc))
+        // Wishlist
+        .route("/admin/customers/{id}/wishlist", get(customers::get_wishlist).delete(customers::clear_wishlist))
+        .route("/admin/customers/{id}/wishlist/items", post(customers::add_to_wishlist))
+        .route("/admin/customers/{id}/wishlist/items/{product_id}", delete(customers::remove_from_wishlist));
+
     // Auth (REST → gRPC pass-through)
     let auth_routes = Router::new()
         // Auth flows
@@ -120,6 +154,7 @@ pub async fn build_router(state: AppState) -> Router {
         .merge(order_routes)
         .merge(shared_routes)
         .merge(auth_routes)
+        .merge(customer_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

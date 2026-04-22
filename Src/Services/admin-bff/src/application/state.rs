@@ -4,6 +4,7 @@ use ddd_shared_kernel::jwt::{JwtValidator, StandardClaims};
 use ddd_shared_kernel::Cache;
 use crate::application::config::AdminBffConfig;
 use crate::infrastructure::clients::auth::AuthClient;
+use crate::infrastructure::clients::customer::CustomerClient;
 use crate::infrastructure::clients::order::OrderClient;
 use crate::infrastructure::clients::product::ProductClient;
 use crate::infrastructure::clients::shared::SharedClient;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub order_client: Arc<OrderClient>,
     pub shared_client: Arc<SharedClient>,
     pub auth_client: Arc<AuthClient>,
+    pub customer_client: Arc<CustomerClient>,
     pub jwt_validator: Option<Arc<JwtValidator<StandardClaims>>>,
     pub pool: Arc<GrpcClientPool>,
     /// Optional read-through cache. `None` when `REDIS_URL` is unset.
@@ -47,6 +49,9 @@ impl AppState {
         let auth_channel = pool
             .channel("auth")
             .expect("auth channel registered");
+        let customer_channel = pool
+            .channel("customer")
+            .expect("customer channel registered");
 
         Self {
             config: Arc::new(config),
@@ -54,6 +59,7 @@ impl AppState {
             order_client: Arc::new(OrderClient::new(order_channel)),
             shared_client: Arc::new(SharedClient::new(shared_channel)),
             auth_client: Arc::new(AuthClient::new(auth_channel)),
+            customer_client: Arc::new(CustomerClient::new(customer_channel)),
             jwt_validator,
             pool: Arc::new(pool),
             cache,

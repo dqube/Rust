@@ -14,10 +14,11 @@
 # port: 3001                    # env: ADMIN_BFF_PORT
 
 services:
-  order_service:   http://localhost:8080    # env: ORDER_SERVICE_URL
-  product_service: http://localhost:50052   # env: PRODUCT_SERVICE_URL
-  shared_service:  http://localhost:50053   # env: SHARED_SERVICE_URL
-  auth_service:    http://localhost:50054   # env: AUTH_SERVICE_URL
+  order_service:    http://localhost:8080    # env: ORDER_SERVICE_URL
+  product_service:  http://localhost:50052   # env: PRODUCT_SERVICE_URL
+  shared_service:   http://localhost:50053   # env: SHARED_SERVICE_URL
+  auth_service:     http://localhost:50054   # env: AUTH_SERVICE_URL
+  customer_service: http://localhost:50055   # env: CUSTOMER_SERVICE_URL
 
 resilience:
   timeout_ms:     5000    # env: GRPC_TIMEOUT_MS

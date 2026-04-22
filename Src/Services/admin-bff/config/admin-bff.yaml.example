@@ -19,6 +19,8 @@ services:
   shared_service:   http://localhost:50053   # env: SHARED_SERVICE_URL
   auth_service:     http://localhost:50054   # env: AUTH_SERVICE_URL
   customer_service: http://localhost:50055   # env: CUSTOMER_SERVICE_URL
+  employee_service: http://localhost:50056   # env: EMPLOYEE_SERVICE_URL
+  supplier_service: http://localhost:50057   # env: SUPPLIER_SERVICE_URL
 
 resilience:
   timeout_ms:     5000    # env: GRPC_TIMEOUT_MS

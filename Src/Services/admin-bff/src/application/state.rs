@@ -5,9 +5,11 @@ use ddd_shared_kernel::Cache;
 use crate::application::config::AdminBffConfig;
 use crate::infrastructure::clients::auth::AuthClient;
 use crate::infrastructure::clients::customer::CustomerClient;
+use crate::infrastructure::clients::employee::EmployeeClient;
 use crate::infrastructure::clients::order::OrderClient;
 use crate::infrastructure::clients::product::ProductClient;
 use crate::infrastructure::clients::shared::SharedClient;
+use crate::infrastructure::clients::supplier::SupplierClient;
 
 /// Unified shared state for all handlers.
 ///
@@ -24,6 +26,8 @@ pub struct AppState {
     pub shared_client: Arc<SharedClient>,
     pub auth_client: Arc<AuthClient>,
     pub customer_client: Arc<CustomerClient>,
+    pub employee_client: Arc<EmployeeClient>,
+    pub supplier_client: Arc<SupplierClient>,
     pub jwt_validator: Option<Arc<JwtValidator<StandardClaims>>>,
     pub pool: Arc<GrpcClientPool>,
     /// Optional read-through cache. `None` when `REDIS_URL` is unset.
@@ -52,6 +56,12 @@ impl AppState {
         let customer_channel = pool
             .channel("customer")
             .expect("customer channel registered");
+        let employee_channel = pool
+            .channel("employee")
+            .expect("employee channel registered");
+        let supplier_channel = pool
+            .channel("supplier")
+            .expect("supplier channel registered");
 
         Self {
             config: Arc::new(config),
@@ -60,6 +70,8 @@ impl AppState {
             shared_client: Arc::new(SharedClient::new(shared_channel)),
             auth_client: Arc::new(AuthClient::new(auth_channel)),
             customer_client: Arc::new(CustomerClient::new(customer_channel)),
+            employee_client: Arc::new(EmployeeClient::new(employee_channel)),
+            supplier_client: Arc::new(SupplierClient::new(supplier_channel)),
             jwt_validator,
             pool: Arc::new(pool),
             cache,

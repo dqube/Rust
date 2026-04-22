@@ -30,3 +30,11 @@ pub mod proto_auth {
 pub mod proto_customer {
     tonic::include_proto!("customer.v1");
 }
+
+pub mod proto_employee {
+    tonic::include_proto!("employee.v1");
+}
+
+pub mod proto_supplier {
+    tonic::include_proto!("supplier.v1");
+}

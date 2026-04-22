@@ -15,9 +15,11 @@ use crate::api::rest::auth;
 use crate::api::rest::batch_orders::batch_get_orders;
 use crate::api::rest::catalog_summary::get_catalog_summary;
 use crate::api::rest::customers;
+use crate::api::rest::employees;
 use crate::api::rest::orders;
 use crate::api::rest::products;
 use crate::api::rest::shared;
+use crate::api::rest::suppliers;
 use crate::application::state::AppState;
 use ddd_bff::middleware::axum_auth::jwt_auth_layer;
 
@@ -120,6 +122,54 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/customers/{id}/wishlist/items", post(customers::add_to_wishlist))
         .route("/admin/customers/{id}/wishlist/items/{product_id}", delete(customers::remove_from_wishlist));
 
+    // Employee CRUD, departments, designations, avatar
+    let employee_routes = Router::new()
+        // Employees
+        .route("/admin/employees", post(employees::create_employee).get(employees::list_employees))
+        .route("/admin/employees/by-user/{user_id}", get(employees::get_employee_by_user_id))
+        .route("/admin/employees/by-code/{code}", get(employees::get_employee_by_code))
+        .route("/admin/employees/{id}", get(employees::get_employee).put(employees::update_employee))
+        .route("/admin/employees/{id}/terminate", put(employees::terminate_employee))
+        .route("/admin/employees/{id}/reactivate", put(employees::reactivate_employee))
+        .route("/admin/employees/{id}/assign-store", put(employees::assign_to_store))
+        // Avatar
+        .route("/admin/employees/{id}/avatar-upload-url", post(employees::request_avatar_upload_url))
+        .route("/admin/employees/{id}/confirm-avatar", post(employees::confirm_avatar_upload))
+        .route("/admin/employees/{id}/avatar", delete(employees::delete_avatar).get(employees::get_avatar_url))
+        // Departments
+        .route("/admin/employees/departments", post(employees::create_department).get(employees::list_departments))
+        .route("/admin/employees/departments/{id}", get(employees::get_department).put(employees::update_department))
+        // Designations
+        .route("/admin/employees/designations", post(employees::create_designation).get(employees::list_designations))
+        .route("/admin/employees/designations/{id}", get(employees::get_designation).put(employees::update_designation));
+
+    // Supplier CRUD, addresses, contacts, documents, products, purchase orders
+    let supplier_routes = Router::new()
+        // Suppliers
+        .route("/admin/suppliers", post(suppliers::create_supplier).get(suppliers::list_suppliers))
+        .route("/admin/suppliers/{id}", get(suppliers::get_supplier).put(suppliers::update_supplier).delete(suppliers::delete_supplier))
+        .route("/admin/suppliers/{id}/activate", put(suppliers::activate_supplier))
+        .route("/admin/suppliers/{id}/deactivate", put(suppliers::deactivate_supplier))
+        .route("/admin/suppliers/{id}/status", put(suppliers::update_supplier_status))
+        .route("/admin/suppliers/{id}/onboarding-status", put(suppliers::update_onboarding_status))
+        // Addresses
+        .route("/admin/suppliers/{id}/addresses", get(suppliers::get_supplier_addresses))
+        // Contacts
+        .route("/admin/suppliers/{id}/contacts", get(suppliers::get_supplier_contacts).post(suppliers::create_supplier_contact))
+        // Documents
+        .route("/admin/suppliers/{id}/documents", get(suppliers::get_supplier_documents))
+        .route("/admin/suppliers/{id}/documents/upload-url", post(suppliers::request_document_upload_url))
+        .route("/admin/suppliers/{id}/documents/confirm", post(suppliers::confirm_document_upload))
+        .route("/admin/suppliers/{id}/documents/{document_id}", delete(suppliers::delete_supplier_document))
+        // Supplier products
+        .route("/admin/suppliers/{id}/products", get(suppliers::list_supplier_products).post(suppliers::add_supplier_product))
+        .route("/admin/suppliers/{id}/products/{supplier_product_id}", delete(suppliers::remove_supplier_product))
+        // Purchase orders
+        .route("/admin/purchase-orders", post(suppliers::create_purchase_order).get(suppliers::list_purchase_orders))
+        .route("/admin/purchase-orders/{id}", get(suppliers::get_purchase_order))
+        .route("/admin/purchase-orders/{id}/submit", put(suppliers::submit_purchase_order))
+        .route("/admin/purchase-orders/{id}/cancel", put(suppliers::cancel_purchase_order));
+
     // Auth (REST → gRPC pass-through)
     let auth_routes = Router::new()
         // Auth flows
@@ -155,6 +205,8 @@ pub async fn build_router(state: AppState) -> Router {
         .merge(shared_routes)
         .merge(auth_routes)
         .merge(customer_routes)
+        .merge(employee_routes)
+        .merge(supplier_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

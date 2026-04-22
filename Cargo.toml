@@ -12,6 +12,8 @@ members = [
     "Src/Services/shared-service",
     "Src/Services/auth-service",
     "Src/Services/customer-service",
+    "Src/Services/employee-service",
+    "Src/Services/supplier-service",
 ]
 resolver = "2"
 
@@ -130,3 +132,4 @@ regex       = "1"
 
 # ── Auth / JWT ────────────────────────────────────────────────────────────────
 jsonwebtoken = "9"
+rust_decimal = { version = "1", features = ["serde-with-str"] }

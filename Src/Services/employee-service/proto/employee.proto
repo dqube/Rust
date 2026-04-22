@@ -1,0 +1,240 @@
+syntax = "proto3";
+package employee.v1;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Common messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+message Empty {}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Employee messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+message EmployeeMessage {
+    string  id               = 1;
+    string  user_id          = 2;
+    string  employee_code    = 3;
+    string  first_name       = 4;
+    string  last_name        = 5;
+    string  middle_name      = 6;
+    string  date_of_birth    = 7;   // ISO date YYYY-MM-DD, empty if null
+    string  gender           = 8;   // "Male"|"Female"|"Other", empty if null
+    string  email            = 9;
+    string  personal_email   = 10;
+    string  phone            = 11;
+    string  mobile           = 12;
+    string  department_id    = 13;  // empty if null
+    string  designation_id   = 14;  // empty if null
+    string  manager_id       = 15;  // empty if null
+    string  employment_type  = 16;  // "FullTime"|"PartTime"|"Contract"|"Intern"
+    string  date_of_joining  = 17;  // ISO date YYYY-MM-DD
+    string  date_of_leaving  = 18;  // ISO date YYYY-MM-DD, empty if null
+    string  status           = 19;  // "Active"|"Inactive"|"OnLeave"|"Terminated"
+    string  salary           = 20;  // decimal string, empty if null
+    string  bank_account_number = 21;
+    string  bank_ifsc_code   = 22;
+    string  bank_name        = 23;
+    string  avatar_object_name = 24; // empty if none
+    int32   current_store_id = 25;  // 0 if null
+    string  created_at       = 26;  // RFC 3339
+    string  updated_at       = 27;  // RFC 3339, empty if null
+}
+
+message ListEmployeesRequest {
+    uint32  page            = 1;
+    uint32  per_page        = 2;
+    string  status_filter   = 3;  // optional; empty = all
+    string  department_id   = 4;  // optional; empty = all
+    string  search          = 5;  // optional; partial name/code/email match
+}
+
+message ListEmployeesResponse {
+    repeated EmployeeMessage items       = 1;
+    uint64                   total       = 2;
+    uint32                   page        = 3;
+    uint32                   per_page    = 4;
+    uint32                   total_pages = 5;
+}
+
+message CreateEmployeeRequest {
+    string  user_id          = 1;
+    string  first_name       = 2;
+    string  last_name        = 3;
+    string  middle_name      = 4;
+    string  date_of_birth    = 5;
+    string  gender           = 6;
+    string  email            = 7;
+    string  personal_email   = 8;
+    string  phone            = 9;
+    string  mobile           = 10;
+    string  department_id    = 11;
+    string  designation_id   = 12;
+    string  manager_id       = 13;
+    string  employment_type  = 14;
+    string  date_of_joining  = 15;
+    string  salary           = 16;
+    string  bank_account_number = 17;
+    string  bank_ifsc_code   = 18;
+    string  bank_name        = 19;
+}
+
+message UpdateEmployeeRequest {
+    string  id               = 1;
+    string  first_name       = 2;
+    string  last_name        = 3;
+    string  middle_name      = 4;
+    string  date_of_birth    = 5;
+    string  gender           = 6;
+    string  email            = 7;
+    string  personal_email   = 8;
+    string  phone            = 9;
+    string  mobile           = 10;
+    string  department_id    = 11;
+    string  designation_id   = 12;
+    string  manager_id       = 13;
+    string  employment_type  = 14;
+    string  salary           = 15;
+    string  bank_account_number = 16;
+    string  bank_ifsc_code   = 17;
+    string  bank_name        = 18;
+}
+
+message GetEmployeeRequest       { string id      = 1; }
+message GetEmployeeByUserIdRequest { string user_id = 1; }
+message GetEmployeeByCodeRequest { string code     = 1; }
+
+message TerminateEmployeeRequest {
+    string  id             = 1;
+    string  date_of_leaving = 2;  // ISO date YYYY-MM-DD
+}
+
+message ReactivateEmployeeRequest { string id = 1; }
+
+message AssignEmployeeToStoreRequest {
+    string id       = 1;
+    int32  store_id = 2;
+}
+
+// Avatar presigned-URL workflow
+message RequestAvatarUploadUrlRequest {
+    string  employee_id  = 1;
+    string  content_type = 2;
+}
+message RequestAvatarUploadUrlResponse {
+    string upload_url  = 1;
+    string object_name = 2;
+    string expires_at  = 3;
+}
+
+message ConfirmAvatarUploadRequest {
+    string  employee_id  = 1;
+    string  object_name  = 2;
+}
+
+message DeleteAvatarRequest { string employee_id = 1; }
+
+message GetAvatarUrlRequest {
+    string  employee_id  = 1;
+}
+message GetAvatarUrlResponse {
+    string  url         = 1;
+    string  expires_at  = 2;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Department messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+message DepartmentMessage {
+    string  id                    = 1;
+    string  department_name       = 2;
+    string  department_code       = 3;
+    string  parent_department_id  = 4;
+    string  head_of_department_id = 5;
+    bool    is_active             = 6;
+    string  created_at            = 7;
+    string  updated_at            = 8;
+}
+
+message ListDepartmentsRequest  {}
+message ListDepartmentsResponse { repeated DepartmentMessage items = 1; }
+
+message CreateDepartmentRequest {
+    string  department_name       = 1;
+    string  department_code       = 2;
+    string  parent_department_id  = 3;
+    string  head_of_department_id = 4;
+}
+
+message UpdateDepartmentRequest {
+    string  id                = 1;
+    string  department_name   = 2;
+    string  department_code   = 3;
+}
+
+message GetDepartmentRequest { string id = 1; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Designation messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+message DesignationMessage {
+    string  id               = 1;
+    string  designation_name = 2;
+    int32   level            = 3;   // 0 if null
+    bool    is_active        = 4;
+    string  created_at       = 5;
+    string  updated_at       = 6;
+}
+
+message ListDesignationsRequest  {}
+message ListDesignationsResponse { repeated DesignationMessage items = 1; }
+
+message CreateDesignationRequest {
+    string  designation_name = 1;
+    int32   level            = 2;
+}
+
+message UpdateDesignationRequest {
+    string  id               = 1;
+    string  designation_name = 2;
+    int32   level            = 3;
+}
+
+message GetDesignationRequest { string id = 1; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Service
+// ─────────────────────────────────────────────────────────────────────────────
+
+service EmployeeService {
+    // Employees
+    rpc CreateEmployee          (CreateEmployeeRequest)           returns (EmployeeMessage);
+    rpc GetEmployee             (GetEmployeeRequest)              returns (EmployeeMessage);
+    rpc GetEmployeeByUserId     (GetEmployeeByUserIdRequest)      returns (EmployeeMessage);
+    rpc GetEmployeeByCode       (GetEmployeeByCodeRequest)        returns (EmployeeMessage);
+    rpc UpdateEmployee          (UpdateEmployeeRequest)           returns (EmployeeMessage);
+    rpc TerminateEmployee       (TerminateEmployeeRequest)        returns (EmployeeMessage);
+    rpc ReactivateEmployee      (ReactivateEmployeeRequest)       returns (EmployeeMessage);
+    rpc ListEmployees           (ListEmployeesRequest)            returns (ListEmployeesResponse);
+    rpc AssignEmployeeToStore   (AssignEmployeeToStoreRequest)    returns (EmployeeMessage);
+
+    // Avatar
+    rpc RequestAvatarUploadUrl  (RequestAvatarUploadUrlRequest)   returns (RequestAvatarUploadUrlResponse);
+    rpc ConfirmAvatarUpload     (ConfirmAvatarUploadRequest)      returns (EmployeeMessage);
+    rpc DeleteAvatar            (DeleteAvatarRequest)             returns (EmployeeMessage);
+    rpc GetAvatarUrl            (GetAvatarUrlRequest)             returns (GetAvatarUrlResponse);
+
+    // Departments
+    rpc ListDepartments         (ListDepartmentsRequest)          returns (ListDepartmentsResponse);
+    rpc CreateDepartment        (CreateDepartmentRequest)         returns (DepartmentMessage);
+    rpc GetDepartment           (GetDepartmentRequest)            returns (DepartmentMessage);
+    rpc UpdateDepartment        (UpdateDepartmentRequest)         returns (DepartmentMessage);
+
+    // Designations
+    rpc ListDesignations        (ListDesignationsRequest)         returns (ListDesignationsResponse);
+    rpc CreateDesignation       (CreateDesignationRequest)        returns (DesignationMessage);
+    rpc GetDesignation          (GetDesignationRequest)           returns (DesignationMessage);
+    rpc UpdateDesignation       (UpdateDesignationRequest)        returns (DesignationMessage);
+}

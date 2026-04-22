@@ -78,6 +78,8 @@ pub struct ServiceUrls {
     pub shared_service: String,
     pub auth_service: String,
     pub customer_service: String,
+    pub employee_service: String,
+    pub supplier_service: String,
 }
 
 impl AdminBffConfig {
@@ -129,6 +131,8 @@ impl AdminBffConfig {
                 shared_service: "http://localhost:50053".into(),
                 auth_service: "http://localhost:50054".into(),
                 customer_service: "http://localhost:50055".into(),
+                employee_service: "http://localhost:50056".into(),
+                supplier_service: "http://localhost:50057".into(),
             },
             auth: AuthConfig {
                 secret: String::new(),
@@ -166,6 +170,16 @@ impl Validate for AdminBffConfig {
         validate_http_url(
             "services.customer_service",
             &self.services.customer_service,
+            report,
+        );
+        validate_http_url(
+            "services.employee_service",
+            &self.services.employee_service,
+            report,
+        );
+        validate_http_url(
+            "services.supplier_service",
+            &self.services.supplier_service,
             report,
         );
 
@@ -228,6 +242,8 @@ struct ServicesFile {
     shared_service: Option<String>,
     auth_service: Option<String>,
     customer_service: Option<String>,
+    employee_service: Option<String>,
+    supplier_service: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -323,6 +339,12 @@ fn overlay_file(cfg: &mut AdminBffConfig, f: ConfigFile) {
     if let Some(v) = f.services.customer_service {
         cfg.services.customer_service = v;
     }
+    if let Some(v) = f.services.employee_service {
+        cfg.services.employee_service = v;
+    }
+    if let Some(v) = f.services.supplier_service {
+        cfg.services.supplier_service = v;
+    }
     if let Some(v) = f.resilience.timeout_ms {
         cfg.bff.resilience.timeout = Duration::from_millis(v);
     }
@@ -383,6 +405,8 @@ fn apply_env_layer(cfg: &mut AdminBffConfig, report: &mut Report) {
     apply_str("SHARED_SERVICE_URL", |v| cfg.services.shared_service = v);
     apply_str("AUTH_SERVICE_URL", |v| cfg.services.auth_service = v);
     apply_str("CUSTOMER_SERVICE_URL", |v| cfg.services.customer_service = v);
+    apply_str("EMPLOYEE_SERVICE_URL", |v| cfg.services.employee_service = v);
+    apply_str("SUPPLIER_SERVICE_URL", |v| cfg.services.supplier_service = v);
 
     apply_parse::<u64>("GRPC_TIMEOUT_MS", report, |v| {
         cfg.bff.resilience.timeout = Duration::from_millis(v)

@@ -56,9 +56,9 @@ Production-ready Domain-Driven Design building blocks for Rust microservices, im
 
 | Service | Type | Depends on | Purpose |
 |---------|------|------------|---------|
-| [`admin-bff`](Src/service/admin-bff/) | bin | ddd-bff, ddd-shared-kernel | REST gateway for admin console — fronts product-service (gRPC) and order-service (gRPC) |
-| [`order-service`](Src/service/order-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Order management with gRPC and REST APIs |
-| [`product-service`](Src/service/product-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Product management with gRPC and REST APIs, presigned image upload |
+| [`admin-bff`](Src/Services/admin-bff/) | bin | ddd-bff, ddd-shared-kernel | REST gateway for admin console — fronts product-service (gRPC) and order-service (gRPC) |
+| [`order-service`](Src/Services/order-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Order management with gRPC and REST APIs |
+| [`product-service`](Src/Services/product-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Product management with gRPC and REST APIs, presigned image upload |
 
 Each crate is independently buildable — there is **no root workspace**. Path dependencies are relative (`../ddd-shared-kernel`).
 
@@ -238,9 +238,9 @@ for dir in ddd-shared-kernel ddd-domain ddd-application ddd-infrastructure ddd-a
 done
 
 # Build all services
-cargo build --manifest-path Src/service/order-service/Cargo.toml
-cargo build --manifest-path Src/service/product-service/Cargo.toml
-cargo build --manifest-path Src/service/admin-bff/Cargo.toml
+cargo build --manifest-path Src/Services/order-service/Cargo.toml
+cargo build --manifest-path Src/Services/product-service/Cargo.toml
+cargo build --manifest-path Src/Services/admin-bff/Cargo.toml
 
 # Run all tests
 for dir in ddd-shared-kernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do

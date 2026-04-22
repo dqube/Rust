@@ -208,7 +208,7 @@ Set env vars (all have sensible defaults):
 
 ## admin-bff — reference consumer
 
-`admin-bff` under `Src/service/admin-bff/` is the canonical example. All its modules are thin re-exports:
+`admin-bff` under `Src/Services/admin-bff/` is the canonical example. All its modules are thin re-exports:
 
 | File | Re-exports from |
 |------|----------------|

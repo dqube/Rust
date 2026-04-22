@@ -215,13 +215,13 @@ Set environment variables (or place them in a `.env` file):
 
 ```bash
 # Check
-cargo check --manifest-path Src/service/admin-bff/Cargo.toml
+cargo check --manifest-path Src/Services/admin-bff/Cargo.toml
 
 # Build
-cargo build --manifest-path Src/service/admin-bff/Cargo.toml
+cargo build --manifest-path Src/Services/admin-bff/Cargo.toml
 
 # Run (requires product-service on :50052 and order-service on :50051)
-cargo run --manifest-path Src/service/admin-bff/Cargo.toml
+cargo run --manifest-path Src/Services/admin-bff/Cargo.toml
 
 # Scalar UI
 open http://localhost:3001/scalar

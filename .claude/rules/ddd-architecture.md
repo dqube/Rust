@@ -88,7 +88,7 @@ Handlers self-register via `register_command_handler!` / `register_query_handler
 - Do not define repository implementations in `ddd-domain` — only ports (traits). Impls go in `ddd-infrastructure`.
 - Do not add business logic in `ddd-bff` handlers — BFF delegates to downstream gRPC services only.
 - Do not add `ddd-domain` or `ddd-application` as dependencies of `ddd-bff` — it depends only on `ddd-shared-kernel`.
-- Do not turn `ddd-bff` into a binary — it is a library; create a named service binary (e.g. `admin-bff`) under `Src/service/` that consumes it.
+- Do not turn `ddd-bff` into a binary — it is a library; create a named service binary (e.g. `admin-bff`) under `Src/Services/` that consumes it.
 
 ## Verification
 

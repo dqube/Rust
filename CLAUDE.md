@@ -13,7 +13,7 @@ This repo implements reusable DDD (Domain-Driven Design) building blocks for Rus
 - `ddd-api` — gRPC (tonic) + REST (axum) building blocks: interceptors, middleware, error mapping (`AppError` → `tonic::Status` / RFC 9457 Problem Details with `FieldViolation`), global exception handlers, health/readiness probes, graceful shutdown, idempotency key extractors, pagination DTOs, OpenAPI/Scalar. Depends on `ddd-shared-kernel` + `ddd-application`.
 - `ddd-bff` — **library crate** for BFF gateways. gRPC client pool (`GrpcClientPool`, `ResilientChannel`), generic HTTP proxy (`ProxyState`, `proxy_handler`), axum observability middleware, Prometheus metrics (`BFF_METRICS`, `metrics_handler`), declarative OpenAPI catalogue (`ApiRoute`, `inject_routes`), Scalar router (`openapi_router`), downstream spec merge (`merged_openapi`), graceful shutdown (`wait_for_shutdown_signal`), body redaction. Depends only on `ddd-shared-kernel`.
 
-Services live under `Src/service/`:
+Services live under `Src/Services/`:
 
 - `admin-bff` — binary REST gateway for the admin console; consumes `ddd-bff` in pick-and-mix style. Fronts `product-service` (gRPC, port 50052) and `order-service` (gRPC, port 50051).
 - `order-service` — order management service with gRPC + REST APIs.
@@ -198,7 +198,7 @@ use ddd_bff::config::env_or;
 use ddd_bff::transcode::{grpc_status_to_app_error, app_error_to_problem};
 ```
 
-**admin-bff** is the reference consumer of `ddd-bff`. Under `Src/service/admin-bff/src/`:
+**admin-bff** is the reference consumer of `ddd-bff`. Under `Src/Services/admin-bff/src/`:
 - `config.rs` — service-specific config loading + validation; re-exports `ResilienceConfig` and uses `env_or` from `ddd_bff::config`.
 - `openapi.rs` — `AdminApiDoc` (the utoipa doc for this service's schemas) + re-exports `openapi_router` from `ddd_bff::openapi`.
 - `aggregation.rs` — fan-out aggregation endpoint built on `ddd_bff::prelude::*`.

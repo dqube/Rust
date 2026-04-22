@@ -6,10 +6,10 @@ members = [
     "Src/crates/ddd-infrastructure",
     "Src/crates/ddd-api",
     "Src/crates/ddd-bff",
-    "Src/service/order-service",
-    "Src/service/admin-bff",
-    "Src/service/product-service",
-    "Src/service/shared-service",
+    "Src/Services/order-service",
+    "Src/Services/admin-bff",
+    "Src/Services/product-service",
+    "Src/Services/shared-service",
 ]
 resolver = "2"
 

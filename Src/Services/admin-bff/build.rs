@@ -5,7 +5,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]")
         .field_attribute(".", "#[serde(default)]")
         .compile_protos(
-            &["proto/product.proto", "proto/order.proto", "proto/shared.proto"],
+            &[
+                "proto/product.proto",
+                "proto/order.proto",
+                "proto/shared.proto",
+                "proto/auth.proto",
+            ],
             &["proto"],
         )?;
     Ok(())

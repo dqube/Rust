@@ -10,6 +10,7 @@ members = [
     "Src/Services/admin-bff",
     "Src/Services/product-service",
     "Src/Services/shared-service",
+    "Src/Services/auth-service",
 ]
 resolver = "2"
 
@@ -106,6 +107,7 @@ pbkdf2  = { version = "0.12", features = ["simple"] }
 aes-gcm = { version = "0.10", features = ["std"] }
 rand    = "0.8"
 base64  = "0.22"
+sha2    = "0.10"
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
 redis = { version = "0.27", default-features = false, features = ["tokio-comp", "aio"] }

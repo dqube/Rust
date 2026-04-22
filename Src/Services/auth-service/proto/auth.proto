@@ -1,0 +1,243 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// Authentication & authorisation service — gRPC only. REST is handled by
+// the BFF layer, so no HTTP annotations live on these RPCs.
+
+service AuthService {
+  // ── Auth flows ─────────────────────────────────────────────────────────
+  rpc Login          (LoginRequest)          returns (LoginResponse);
+  rpc Register       (RegisterRequest)       returns (RegisterResponse);
+  rpc RefreshToken   (RefreshTokenRequest)   returns (LoginResponse);
+  rpc Logout         (LogoutRequest)         returns (Empty);
+  rpc ChangePassword (ChangePasswordRequest) returns (Empty);
+
+  // ── User queries ───────────────────────────────────────────────────────
+  rpc GetUser        (GetUserRequest)        returns (GetUserResponse);
+  rpc GetUserByEmail (GetUserByEmailRequest) returns (GetUserResponse);
+  rpc ListUsers      (ListUsersRequest)      returns (ListUsersResponse);
+
+  // ── User administration ───────────────────────────────────────────────
+  rpc ChangePasswordAdmin (ChangePasswordAdminRequest) returns (Empty);
+  rpc ForgotPassword      (ForgotPasswordRequest)      returns (Empty);
+  rpc ResetPassword       (ResetPasswordRequest)       returns (Empty);
+  rpc ActivateUser        (ActivateUserRequest)        returns (Empty);
+  rpc DeactivateUser      (DeactivateUserRequest)      returns (Empty);
+
+  // ── Roles ──────────────────────────────────────────────────────────────
+  rpc ListRoles    (Empty)             returns (ListRolesResponse);
+  rpc CreateRole   (CreateRoleRequest) returns (RoleInfo);
+  rpc ListUserRoles    (ListUserRolesRequest)    returns (ListUserRolesResponse);
+  rpc AssignRole       (AssignRoleRequest)       returns (AssignRoleResponse);
+  rpc RemoveUserRole   (RemoveUserRoleRequest)   returns (Empty);
+
+  // ── Role permissions ───────────────────────────────────────────────────
+  rpc AddRolePermission      (AddRolePermissionRequest)      returns (Empty);
+  rpc RemoveRolePermission   (RemoveRolePermissionRequest)   returns (Empty);
+  rpc GetRolePermissionsById (GetRolePermissionsByIdRequest) returns (PermissionsResponse);
+  rpc CheckPermission        (CheckPermissionRequest)        returns (CheckPermissionResponse);
+  rpc GetRolePermissions     (GetRolePermissionsRequest)     returns (PermissionsResponse);
+}
+
+message Empty {}
+
+// ── UserInfo ────────────────────────────────────────────────────────────────
+
+message UserInfo {
+  string user_id            = 1;
+  string username           = 2;
+  string email              = 3;
+  bool   email_confirmed    = 4;
+  string user_type          = 5;
+  bool   two_factor_enabled = 6;
+  bool   is_active          = 7;
+  bool   is_locked          = 8;
+  string created_at         = 9;  // ISO 8601
+}
+
+// ── Auth flows ──────────────────────────────────────────────────────────────
+
+message LoginRequest {
+  string username_or_email = 1;
+  string password          = 2;
+  string ip_address        = 3;
+}
+
+message LoginResponse {
+  string   access_token  = 1;
+  string   refresh_token = 2;
+  string   expires_at    = 3;  // ISO 8601
+  UserInfo user          = 4;
+}
+
+message RegisterRequest {
+  string username   = 1;
+  string email      = 2;
+  string password   = 3;
+  string user_type  = 4;   // Customer | Employee | Supplier | Admin
+  string first_name = 5;
+  string last_name  = 6;
+  string phone      = 7;
+}
+
+message RegisterResponse {
+  UserInfo user = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string ip_address    = 2;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message ChangePasswordRequest {
+  string user_id          = 1;
+  string current_password = 2;
+  string new_password     = 3;
+}
+
+message ChangePasswordAdminRequest {
+  string user_id      = 1;
+  string new_password = 2;
+}
+
+message ForgotPasswordRequest {
+  string email = 1;
+}
+
+message ResetPasswordRequest {
+  string token        = 1;
+  string new_password = 2;
+}
+
+message ActivateUserRequest {
+  string user_id = 1;
+}
+
+message DeactivateUserRequest {
+  string user_id = 1;
+}
+
+// ── User queries ────────────────────────────────────────────────────────────
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUserResponse {
+  bool     found = 1;
+  UserInfo user  = 2;
+}
+
+// Pagination follows product-service: `page` + `per_page` (u32). Response
+// mirrors `Page<T>` from ddd-shared-kernel.
+message ListUsersRequest {
+  uint32 page         = 1;
+  uint32 per_page     = 2;
+  string search       = 3;
+  bool   is_active    = 4;
+  bool   has_is_active = 5;
+  bool   is_locked    = 6;
+  bool   has_is_locked = 7;
+}
+
+message ListUsersResponse {
+  repeated UserInfo items       = 1;
+  uint64            total       = 2;
+  uint32            page        = 3;
+  uint32            per_page    = 4;
+  uint32            total_pages = 5;
+}
+
+// ── Roles ──────────────────────────────────────────────────────────────────
+
+message RoleInfo {
+  string role_id     = 1;
+  string name        = 2;
+  string role_type   = 3;
+  string description = 4;
+  bool   is_active   = 5;
+  string created_at  = 6;
+}
+
+message ListRolesResponse {
+  repeated RoleInfo roles = 1;
+}
+
+message CreateRoleRequest {
+  string name        = 1;
+  string description = 2;
+}
+
+message UserRoleItem {
+  string user_role_id = 1;
+  string user_id      = 2;
+  string role_id      = 3;
+  string role_name    = 4;
+  string role_type    = 5;
+  string assigned_at  = 6;
+  string expires_at   = 7;
+}
+
+message ListUserRolesRequest {
+  string user_id = 1;
+}
+
+message ListUserRolesResponse {
+  repeated UserRoleItem user_roles = 1;
+}
+
+message AssignRoleRequest {
+  string user_id     = 1;
+  string role_id     = 2;
+  string assigned_by = 3;
+}
+
+message AssignRoleResponse {
+  string user_role_id = 1;
+}
+
+message RemoveUserRoleRequest {
+  string user_role_id = 1;
+}
+
+// ── Role permissions ───────────────────────────────────────────────────────
+
+message AddRolePermissionRequest {
+  string role_id    = 1;
+  string permission = 2;
+}
+
+message RemoveRolePermissionRequest {
+  string role_id    = 1;
+  string permission = 2;
+}
+
+message GetRolePermissionsByIdRequest {
+  string role_id = 1;
+}
+
+message CheckPermissionRequest {
+  string user_id    = 1;
+  string permission = 2;
+}
+
+message CheckPermissionResponse {
+  bool has_permission = 1;
+}
+
+message GetRolePermissionsRequest {
+  repeated string role_names = 1;
+}
+
+message PermissionsResponse {
+  repeated string permissions = 1;
+}

@@ -1,0 +1,51 @@
+[package]
+name = "auth-service"
+version.workspace = true
+edition.workspace = true
+description = "Authentication & authorisation microservice (users, roles, permissions, JWT issuance) — gRPC-only."
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "auth-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel  = { workspace = true, features = ["jwt"] }
+ddd-domain         = { workspace = true }
+ddd-application    = { workspace = true }
+ddd-api            = { workspace = true, features = ["grpc"] }
+ddd-infrastructure = { workspace = true, features = ["postgres", "crypto", "nats"] }
+
+# gRPC
+tonic       = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web   = { workspace = true }
+prost       = { workspace = true }
+
+# Database
+sea-orm = { workspace = true }
+sqlx    = { workspace = true }
+
+# JWT issuance (validation goes through ddd_shared_kernel::jwt)
+jsonwebtoken = { workspace = true }
+
+# Refresh / reset token hashing (fast one-shot SHA-256, not password hashing)
+sha2   = { workspace = true }
+base64 = { workspace = true }
+
+# Serde / common
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait        = { workspace = true }
+thiserror          = { workspace = true }
+chrono             = { workspace = true }
+tokio              = { workspace = true }
+inventory          = { workspace = true }
+uuid               = { workspace = true }
+rand               = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }

@@ -1,4 +1,4 @@
-use axum::{middleware as axum_mw, routing::{get, post, put}, Router};
+use axum::{middleware as axum_mw, routing::{delete, get, post, put}, Router};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::timeout::TimeoutLayer;
 use utoipa::OpenApi;
@@ -11,6 +11,7 @@ use ddd_shared_kernel::jwt::StandardClaims;
 
 use crate::api::openapi::AdminApiDoc;
 use crate::api::openapi_routes::API_ROUTES;
+use crate::api::rest::auth;
 use crate::api::rest::batch_orders::batch_get_orders;
 use crate::api::rest::catalog_summary::get_catalog_summary;
 use crate::api::rest::orders;
@@ -85,13 +86,40 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/shared/pincodes/{code}/deactivate", put(shared::deactivate_pincode))
         .route("/admin/shared/cities/{code}/pincodes", get(shared::list_pincodes_by_city));
 
-    // Group /admin/* routes and guard them with JWT auth when configured.
+    // Auth (REST → gRPC pass-through)
+    let auth_routes = Router::new()
+        // Auth flows
+        .route("/admin/auth/login",           post(auth::login))
+        .route("/admin/auth/register",        post(auth::register))
+        .route("/admin/auth/refresh",         post(auth::refresh_token))
+        .route("/admin/auth/logout",          post(auth::logout))
+        .route("/admin/auth/change-password", post(auth::change_password))
+        .route("/admin/auth/forgot-password", post(auth::forgot_password))
+        .route("/admin/auth/reset-password",  post(auth::reset_password))
+        .route("/admin/auth/check-permission", post(auth::check_permission))
+        .route("/admin/auth/role-permissions", post(auth::get_role_permissions))
+        // Users
+        .route("/admin/auth/users",                        get(auth::list_users))
+        .route("/admin/auth/users/{user_id}",              get(auth::get_user))
+        .route("/admin/auth/users/by-email/{email}",       get(auth::get_user_by_email))
+        .route("/admin/auth/users/{user_id}/activate",     post(auth::activate_user))
+        .route("/admin/auth/users/{user_id}/deactivate",   post(auth::deactivate_user))
+        .route("/admin/auth/users/{user_id}/change-password-admin", post(auth::change_password_admin))
+        .route("/admin/auth/users/{user_id}/roles",        get(auth::list_user_roles).post(auth::assign_role))
+        // Roles
+        .route("/admin/auth/roles",                                post(auth::create_role).get(auth::list_roles))
+        .route("/admin/auth/roles/{role_id}/permissions",          get(auth::get_role_permissions_by_id).post(auth::add_role_permission))
+        .route("/admin/auth/roles/{role_id}/permissions/{permission}", delete(auth::remove_role_permission))
+        // User-role link
+        .route("/admin/auth/user-roles/{user_role_id}", delete(auth::remove_user_role));
+
     // Group /admin/* routes and guard them with JWT auth when configured.
     let mut admin_routes = Router::new()
         .merge(product_routes)
         .merge(aggregation_routes)
         .merge(order_routes)
         .merge(shared_routes)
+        .merge(auth_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

@@ -76,6 +76,7 @@ pub struct ServiceUrls {
     pub order_service: String,
     pub product_service: String,
     pub shared_service: String,
+    pub auth_service: String,
 }
 
 impl AdminBffConfig {
@@ -125,6 +126,7 @@ impl AdminBffConfig {
                 order_service: "http://localhost:8080".into(),
                 product_service: "http://localhost:50052".into(),
                 shared_service: "http://localhost:50053".into(),
+                auth_service: "http://localhost:50054".into(),
             },
             auth: AuthConfig {
                 secret: String::new(),
@@ -158,6 +160,7 @@ impl Validate for AdminBffConfig {
             report,
         );
         validate_http_url("services.shared_service", &self.services.shared_service, report);
+        validate_http_url("services.auth_service", &self.services.auth_service, report);
 
         // JWT: only enforce when auth is enabled (secret present).
         if !self.auth.secret.is_empty() {
@@ -216,6 +219,7 @@ struct ServicesFile {
     order_service: Option<String>,
     product_service: Option<String>,
     shared_service: Option<String>,
+    auth_service: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -305,6 +309,9 @@ fn overlay_file(cfg: &mut AdminBffConfig, f: ConfigFile) {
     if let Some(v) = f.services.shared_service {
         cfg.services.shared_service = v;
     }
+    if let Some(v) = f.services.auth_service {
+        cfg.services.auth_service = v;
+    }
     if let Some(v) = f.resilience.timeout_ms {
         cfg.bff.resilience.timeout = Duration::from_millis(v);
     }
@@ -363,6 +370,7 @@ fn apply_env_layer(cfg: &mut AdminBffConfig, report: &mut Report) {
     apply_str("ORDER_SERVICE_URL", |v| cfg.services.order_service = v);
     apply_str("PRODUCT_SERVICE_URL", |v| cfg.services.product_service = v);
     apply_str("SHARED_SERVICE_URL", |v| cfg.services.shared_service = v);
+    apply_str("AUTH_SERVICE_URL", |v| cfg.services.auth_service = v);
 
     apply_parse::<u64>("GRPC_TIMEOUT_MS", report, |v| {
         cfg.bff.resilience.timeout = Duration::from_millis(v)

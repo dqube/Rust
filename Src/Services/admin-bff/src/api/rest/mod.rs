@@ -1,5 +1,6 @@
 //! REST handlers — one module per resource / use case.
 
+pub mod auth;
 pub mod batch_orders;
 pub mod catalog_summary;
 pub mod orders;

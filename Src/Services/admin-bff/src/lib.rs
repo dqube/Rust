@@ -22,3 +22,7 @@ pub mod proto_order {
 pub mod proto_shared {
     tonic::include_proto!("shared.v1");
 }
+
+pub mod proto_auth {
+    tonic::include_proto!("auth.v1");
+}

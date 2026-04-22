@@ -66,12 +66,13 @@ async fn main() {
 
     tracing::info!("Starting Admin BFF on {}:{}", config.bff.host, config.bff.port);
 
-    // ── gRPC channels (product + order + shared) via ddd-bff resilient pool ─
+    // ── gRPC channels (product + order + shared + auth) via ddd-bff resilient pool ─
     let pool = GrpcClientPool::from_services(
         [
             ("product", config.services.product_service.as_str()),
             ("order",   config.services.order_service.as_str()),
             ("shared",  config.services.shared_service.as_str()),
+            ("auth",    config.services.auth_service.as_str()),
         ],
         &config.bff.resilience,
     )
@@ -80,7 +81,7 @@ async fn main() {
     // Log the ResilientChannel metadata so operators can verify resilience
     // settings at startup without reading env vars — proves the knobs
     // configured in BffConfig flow through to every upstream.
-    for svc in ["product", "order", "shared"] {
+    for svc in ["product", "order", "shared", "auth"] {
         if let Ok(rc) = pool.get(svc) {
             tracing::info!(
                 service = svc,

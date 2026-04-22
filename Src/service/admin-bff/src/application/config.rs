@@ -61,6 +61,7 @@ pub struct AuthConfig {
 pub struct ServiceUrls {
     pub order_service: String,
     pub product_service: String,
+    pub shared_service: String,
 }
 
 impl AdminBffConfig {
@@ -89,6 +90,7 @@ impl AdminBffConfig {
             services: ServiceUrls {
                 order_service: env_or("ORDER_SERVICE_URL", "http://localhost:8080"),
                 product_service: env_or("PRODUCT_SERVICE_URL", "http://localhost:50052"),
+                shared_service: env_or("SHARED_SERVICE_URL", "http://localhost:50053"),
             },
             resilience: ResilienceConfig {
                 timeout: Duration::from_millis(parse_env(
@@ -156,6 +158,12 @@ impl Validate for AdminBffConfig {
             "services.product_service",
             "PRODUCT_SERVICE_URL",
             &self.services.product_service,
+            report,
+        );
+        validate_http_url(
+            "services.shared_service",
+            "SHARED_SERVICE_URL",
+            &self.services.shared_service,
             report,
         );
 
@@ -281,6 +289,7 @@ mod tests {
             services: ServiceUrls {
                 order_service: "http://localhost:8080".into(),
                 product_service: "http://localhost:50052".into(),
+                shared_service: "http://localhost:50053".into(),
             },
             resilience: ResilienceConfig::default(),
             redact_fields: vec!["password".into()],

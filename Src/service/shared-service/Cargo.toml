@@ -1,0 +1,42 @@
+[package]
+name = "shared-service"
+version.workspace = true
+edition.workspace = true
+description = "Shared reference data microservice (currencies, countries, states, cities, pincodes) — gRPC-only"
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "shared-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel  = { workspace = true }
+ddd-domain         = { workspace = true }
+ddd-application    = { workspace = true }
+ddd-api            = { workspace = true, features = ["grpc"] }
+ddd-infrastructure = { workspace = true }
+
+# gRPC
+tonic       = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web   = { workspace = true }
+prost       = { workspace = true }
+
+# Database
+sea-orm = { workspace = true }
+sqlx    = { workspace = true }
+
+# Serde / common
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait        = { workspace = true }
+thiserror          = { workspace = true }
+chrono             = { workspace = true }
+tokio              = { workspace = true }
+inventory          = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }

@@ -22,6 +22,14 @@ use crate::proto_order::{
     CreateOrderRequest, CreateOrderResponse, GetOrderRequest, GetOrderResponse,
     ListOrdersRequest, ListOrdersResponse, Order, OrderItem,
 };
+use crate::proto_shared::{
+    CityInfo, CityListResponse, CityResponse, CountryInfo, CountryListResponse, CountryResponse,
+    CreateCityRequest, CreateCountryRequest, CreateCurrencyRequest, CreatePincodeRequest,
+    CreateStateRequest, CurrencyInfo, CurrencyListResponse, CurrencyResponse, GetByCodeRequest,
+    PincodeInfo, PincodeListResponse, PincodeResponse, StateInfo, StateListResponse,
+    StateResponse, UpdateCityRequest, UpdateCountryRequest, UpdateCurrencyRequest,
+    UpdatePincodeRequest, UpdateStateRequest,
+};
 
 /// Re-export the generic OpenAPI / Scalar router from `ddd-bff`.
 pub use ddd_bff::openapi::openapi_router;
@@ -71,6 +79,33 @@ pub use ddd_bff::openapi::openapi_router;
         ConfirmOrderResponse,
         CancelOrderRequest,
         CancelOrderResponse,
+        // Shared reference-data proto types (referenced by passthrough routes)
+        GetByCodeRequest,
+        CurrencyInfo,
+        CurrencyResponse,
+        CurrencyListResponse,
+        CreateCurrencyRequest,
+        UpdateCurrencyRequest,
+        CountryInfo,
+        CountryResponse,
+        CountryListResponse,
+        CreateCountryRequest,
+        UpdateCountryRequest,
+        StateInfo,
+        StateResponse,
+        StateListResponse,
+        CreateStateRequest,
+        UpdateStateRequest,
+        CityInfo,
+        CityResponse,
+        CityListResponse,
+        CreateCityRequest,
+        UpdateCityRequest,
+        PincodeInfo,
+        PincodeResponse,
+        PincodeListResponse,
+        CreatePincodeRequest,
+        UpdatePincodeRequest,
     )),
 )]
 pub struct AdminApiDoc;

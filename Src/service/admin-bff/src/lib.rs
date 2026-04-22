@@ -18,3 +18,7 @@ pub mod proto {
 pub mod proto_order {
     tonic::include_proto!("order.v1");
 }
+
+pub mod proto_shared {
+    tonic::include_proto!("shared.v1");
+}

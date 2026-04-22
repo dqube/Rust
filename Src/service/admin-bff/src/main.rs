@@ -66,11 +66,12 @@ async fn main() {
 
     tracing::info!("Starting Admin BFF on {}:{}", config.host, config.port);
 
-    // ── gRPC channels (product + order) via ddd-bff resilient pool ─────
+    // ── gRPC channels (product + order + shared) via ddd-bff resilient pool ─
     let pool = GrpcClientPool::from_services(
         [
             ("product", config.services.product_service.as_str()),
             ("order",   config.services.order_service.as_str()),
+            ("shared",  config.services.shared_service.as_str()),
         ],
         &config.resilience,
     )
@@ -78,6 +79,7 @@ async fn main() {
 
     tracing::info!(url = %config.services.product_service, "connected to product-service (lazy)");
     tracing::info!(url = %config.services.order_service,   "connected to order-service (lazy)");
+    tracing::info!(url = %config.services.shared_service,  "connected to shared-service (lazy)");
 
     // ── JWT validation (optional — enabled when JWT_SECRET is set) ───────
     let jwt_validator: Option<Arc<JwtValidator<StandardClaims>>> =

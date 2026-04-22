@@ -1,0 +1,221 @@
+syntax = "proto3";
+
+package shared.v1;
+
+// ─── Common ──────────────────────────────────────────────────────────────────
+
+message Empty {}
+
+message GetByCodeRequest {
+  string code = 1;
+}
+
+// ─── Currency ────────────────────────────────────────────────────────────────
+
+message CurrencyInfo {
+  string code       = 1;
+  string name       = 2;
+  string symbol     = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  bool   is_active  = 6;
+}
+
+message CurrencyResponse {
+  bool         found    = 1;
+  CurrencyInfo currency = 2;
+}
+
+message CurrencyListResponse {
+  repeated CurrencyInfo currencies = 1;
+}
+
+message CreateCurrencyRequest {
+  string code   = 1;
+  string name   = 2;
+  string symbol = 3;
+}
+
+message UpdateCurrencyRequest {
+  string code   = 1;
+  string name   = 2;
+  string symbol = 3;
+}
+
+// ─── Country ─────────────────────────────────────────────────────────────────
+
+message CountryInfo {
+  string code          = 1;
+  string name          = 2;
+  string currency_code = 3;
+  string created_at    = 4;
+  string updated_at    = 5;
+  bool   is_active     = 6;
+}
+
+message CountryResponse {
+  bool        found   = 1;
+  CountryInfo country = 2;
+}
+
+message CountryListResponse {
+  repeated CountryInfo countries = 1;
+}
+
+message CreateCountryRequest {
+  string code          = 1;
+  string name          = 2;
+  string currency_code = 3;
+}
+
+message UpdateCountryRequest {
+  string code          = 1;
+  string name          = 2;
+  string currency_code = 3;
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+message StateInfo {
+  string code         = 1;
+  string name         = 2;
+  string country_code = 3;
+  string created_at   = 4;
+  string updated_at   = 5;
+  bool   is_active    = 6;
+}
+
+message StateResponse {
+  bool      found = 1;
+  StateInfo state = 2;
+}
+
+message StateListResponse {
+  repeated StateInfo states = 1;
+}
+
+message CreateStateRequest {
+  string code         = 1;
+  string name         = 2;
+  string country_code = 3;
+}
+
+message UpdateStateRequest {
+  string code = 1;
+  string name = 2;
+}
+
+// ─── City ────────────────────────────────────────────────────────────────────
+
+message CityInfo {
+  string code       = 1;
+  string name       = 2;
+  string state_code = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  bool   is_active  = 6;
+}
+
+message CityResponse {
+  bool     found = 1;
+  CityInfo city  = 2;
+}
+
+message CityListResponse {
+  repeated CityInfo cities = 1;
+}
+
+message CreateCityRequest {
+  string code       = 1;
+  string name       = 2;
+  string state_code = 3;
+}
+
+message UpdateCityRequest {
+  string code = 1;
+  string name = 2;
+}
+
+// ─── Pincode ─────────────────────────────────────────────────────────────────
+
+message PincodeInfo {
+  string code       = 1;
+  string city_code  = 2;
+  string area_name  = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  bool   is_active  = 6;
+}
+
+message PincodeResponse {
+  bool        found   = 1;
+  PincodeInfo pincode = 2;
+}
+
+message PincodeListResponse {
+  repeated PincodeInfo pincodes = 1;
+}
+
+message CreatePincodeRequest {
+  string code      = 1;
+  string city_code = 2;
+  string area_name = 3;
+}
+
+message UpdatePincodeRequest {
+  string code      = 1;
+  string area_name = 2;
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+service SharedService {
+  // Currencies
+  rpc GetAllCurrencies     (Empty)                 returns (CurrencyListResponse);
+  rpc GetCurrencyByCode    (GetByCodeRequest)      returns (CurrencyResponse);
+  rpc CreateCurrency       (CreateCurrencyRequest) returns (Empty);
+  rpc UpdateCurrency       (UpdateCurrencyRequest) returns (Empty);
+  rpc DeleteCurrency       (GetByCodeRequest)      returns (Empty);
+  rpc ActivateCurrency     (GetByCodeRequest)      returns (Empty);
+  rpc DeactivateCurrency   (GetByCodeRequest)      returns (Empty);
+
+  // Countries
+  rpc GetAllCountries        (Empty)                returns (CountryListResponse);
+  rpc GetCountryByCode       (GetByCodeRequest)     returns (CountryResponse);
+  rpc GetCountriesByCurrency (GetByCodeRequest)     returns (CountryListResponse);
+  rpc CreateCountry          (CreateCountryRequest) returns (Empty);
+  rpc UpdateCountry          (UpdateCountryRequest) returns (Empty);
+  rpc DeleteCountry          (GetByCodeRequest)     returns (Empty);
+  rpc ActivateCountry        (GetByCodeRequest)     returns (Empty);
+  rpc DeactivateCountry      (GetByCodeRequest)     returns (Empty);
+
+  // States
+  rpc GetAllStates       (Empty)              returns (StateListResponse);
+  rpc GetStateByCode     (GetByCodeRequest)   returns (StateResponse);
+  rpc GetStatesByCountry (GetByCodeRequest)   returns (StateListResponse);
+  rpc CreateState        (CreateStateRequest) returns (Empty);
+  rpc UpdateState        (UpdateStateRequest) returns (Empty);
+  rpc DeleteState        (GetByCodeRequest)   returns (Empty);
+  rpc ActivateState      (GetByCodeRequest)   returns (Empty);
+  rpc DeactivateState    (GetByCodeRequest)   returns (Empty);
+
+  // Cities
+  rpc GetAllCities      (Empty)             returns (CityListResponse);
+  rpc GetCityByCode     (GetByCodeRequest)  returns (CityResponse);
+  rpc GetCitiesByState  (GetByCodeRequest)  returns (CityListResponse);
+  rpc CreateCity        (CreateCityRequest) returns (Empty);
+  rpc UpdateCity        (UpdateCityRequest) returns (Empty);
+  rpc DeleteCity        (GetByCodeRequest)  returns (Empty);
+  rpc ActivateCity      (GetByCodeRequest)  returns (Empty);
+  rpc DeactivateCity    (GetByCodeRequest)  returns (Empty);
+
+  // Pincodes
+  rpc GetAllPincodes     (Empty)                returns (PincodeListResponse);
+  rpc GetPincodeByCode   (GetByCodeRequest)     returns (PincodeResponse);
+  rpc GetPincodesByCity  (GetByCodeRequest)     returns (PincodeListResponse);
+  rpc CreatePincode      (CreatePincodeRequest) returns (Empty);
+  rpc UpdatePincode      (UpdatePincodeRequest) returns (Empty);
+  rpc DeletePincode      (GetByCodeRequest)     returns (Empty);
+  rpc ActivatePincode    (GetByCodeRequest)     returns (Empty);
+  rpc DeactivatePincode  (GetByCodeRequest)     returns (Empty);
+}

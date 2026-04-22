@@ -15,6 +15,7 @@ use crate::api::rest::batch_orders::batch_get_orders;
 use crate::api::rest::catalog_summary::get_catalog_summary;
 use crate::api::rest::orders;
 use crate::api::rest::products;
+use crate::api::rest::shared;
 use crate::application::state::AppState;
 use ddd_bff::middleware::axum_auth::jwt_auth_layer;
 
@@ -52,12 +53,45 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/orders/{id}/confirm", put(orders::confirm_order))
         .route("/admin/orders/{id}/cancel",  put(orders::cancel_order));
 
+    // Shared reference data (REST → gRPC pass-through)
+    let shared_routes = Router::new()
+        // Currencies
+        .route("/admin/shared/currencies", post(shared::create_currency).get(shared::list_currencies))
+        .route("/admin/shared/currencies/{code}", get(shared::get_currency).put(shared::update_currency).delete(shared::delete_currency))
+        .route("/admin/shared/currencies/{code}/activate", put(shared::activate_currency))
+        .route("/admin/shared/currencies/{code}/deactivate", put(shared::deactivate_currency))
+        // Countries
+        .route("/admin/shared/countries", post(shared::create_country).get(shared::list_countries))
+        .route("/admin/shared/countries/{code}", get(shared::get_country).put(shared::update_country).delete(shared::delete_country))
+        .route("/admin/shared/countries/{code}/activate", put(shared::activate_country))
+        .route("/admin/shared/countries/{code}/deactivate", put(shared::deactivate_country))
+        .route("/admin/shared/currencies/{code}/countries", get(shared::list_countries_by_currency))
+        // States
+        .route("/admin/shared/states", post(shared::create_state).get(shared::list_states))
+        .route("/admin/shared/states/{code}", get(shared::get_state).put(shared::update_state).delete(shared::delete_state))
+        .route("/admin/shared/states/{code}/activate", put(shared::activate_state))
+        .route("/admin/shared/states/{code}/deactivate", put(shared::deactivate_state))
+        .route("/admin/shared/countries/{code}/states", get(shared::list_states_by_country))
+        // Cities
+        .route("/admin/shared/cities", post(shared::create_city).get(shared::list_cities))
+        .route("/admin/shared/cities/{code}", get(shared::get_city).put(shared::update_city).delete(shared::delete_city))
+        .route("/admin/shared/cities/{code}/activate", put(shared::activate_city))
+        .route("/admin/shared/cities/{code}/deactivate", put(shared::deactivate_city))
+        .route("/admin/shared/states/{code}/cities", get(shared::list_cities_by_state))
+        // Pincodes
+        .route("/admin/shared/pincodes", post(shared::create_pincode).get(shared::list_pincodes))
+        .route("/admin/shared/pincodes/{code}", get(shared::get_pincode).put(shared::update_pincode).delete(shared::delete_pincode))
+        .route("/admin/shared/pincodes/{code}/activate", put(shared::activate_pincode))
+        .route("/admin/shared/pincodes/{code}/deactivate", put(shared::deactivate_pincode))
+        .route("/admin/shared/cities/{code}/pincodes", get(shared::list_pincodes_by_city));
+
     // Group /admin/* routes and guard them with JWT auth when configured.
     // Group /admin/* routes and guard them with JWT auth when configured.
     let mut admin_routes = Router::new()
         .merge(product_routes)
         .merge(aggregation_routes)
         .merge(order_routes)
+        .merge(shared_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

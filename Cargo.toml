@@ -9,6 +9,7 @@ members = [
     "Src/service/order-service",
     "Src/service/admin-bff",
     "Src/service/product-service",
+    "Src/service/shared-service",
 ]
 resolver = "2"
 

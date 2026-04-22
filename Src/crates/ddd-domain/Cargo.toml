@@ -21,3 +21,4 @@ tracing     = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
+uuid  = { workspace = true }

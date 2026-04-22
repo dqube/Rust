@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use ddd_application::saga::{DefaultSagaOrchestrator, SagaDefinitionRegistry};
-use ddd_shared_kernel::saga::{SagaDefinition, SagaStepDefinition, SagaOrchestrator};
+use ddd_shared_kernel::saga::{SagaDefinition, SagaStepDefinition, SagaOrchestrator, SagaInstanceRepository};
+use ddd_shared_kernel::outbox::OutboxRepository;
 use ddd_application::testing::{InMemorySagaInstanceRepository, InMemoryOutboxRepository};
 use ddd_shared_kernel::AppResult;
 
@@ -31,8 +32,8 @@ async fn main() -> AppResult<()> {
     let mut registry = SagaDefinitionRegistry::new();
     registry.register(create_order_def);
 
-    let saga_repo = Arc::new(InMemorySagaInstanceRepository::new());
-    let outbox_repo = Arc::new(InMemoryOutboxRepository::new());
+    let saga_repo = Arc::new(InMemorySagaInstanceRepository::default());
+    let outbox_repo = Arc::new(InMemoryOutboxRepository::default());
 
     // 3. Initialize the Orchestrator
     let orchestrator = DefaultSagaOrchestrator::new(

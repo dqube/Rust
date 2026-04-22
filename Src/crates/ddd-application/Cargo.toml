@@ -34,3 +34,7 @@ uuid   = { workspace = true }
 [[example]]
 name = "in_memory_fakes"
 required-features = ["testing"]
+
+[[example]]
+name = "saga_orchestration"
+required-features = ["testing"]

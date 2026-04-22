@@ -18,13 +18,11 @@ pub mod mediator;
 pub mod pagination;
 pub mod ports;
 pub mod saga;
+pub mod testing;
 pub mod unit_of_work;
 pub mod use_case;
 pub mod validation;
 pub mod validator_registry;
-
-#[cfg(any(test, feature = "testing"))]
-pub mod testing;
 
 pub use cqrs::{Command, CommandBus, CommandHandler, Query, QueryBus, QueryHandler};
 pub use event_handling::{BoxedDomainEvent, DomainEventHandler, EventHandlerRegistry};

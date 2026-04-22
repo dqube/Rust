@@ -28,8 +28,9 @@ struct OrderPlaced {
 }
 
 impl DomainEvent for OrderPlaced {
-    fn event_type(&self) -> &str { "order.placed.v1" }
-    fn aggregate_id(&self) -> String { self.order_id.to_string() }
+    fn event_name(&self) -> &'static str { "order.placed.v1" }
+    fn occurred_at(&self) -> chrono::DateTime<chrono::Utc> { chrono::Utc::now() }
+    fn as_any(&self) -> &dyn std::any::Any { self }
 }
 
 fn main() {
@@ -57,7 +58,7 @@ fn main() {
 
     println!("Pending events: {}", order.domain_events.len());
     for ev in &order.domain_events {
-        println!("  - Event: {}", ev.event_type());
+        println!("  - Event: {}", ev.event_name());
     }
 
     // 7. Clear events

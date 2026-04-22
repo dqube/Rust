@@ -20,6 +20,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use std::marker::PhantomData;
 
 use async_trait::async_trait;
 use ddd_shared_kernel::idempotency::IdempotencyStore;
@@ -46,27 +47,40 @@ pub trait IdempotentCommand: Command {
 /// return the cached response directly.
 ///
 /// If the inner handler fails, the key is released so the client can retry.
-pub struct IdempotentCommandHandler<C: Command> {
-    inner: Arc<dyn CommandHandler<C>>,
-    store: Arc<dyn IdempotencyStore>,
+pub struct IdempotentCommandHandler<
+    C: Command,
+    H: CommandHandler<C> + ?Sized = dyn CommandHandler<C>,
+    S: IdempotencyStore + ?Sized = dyn IdempotencyStore,
+> {
+    inner: Arc<H>,
+    store: Arc<S>,
     ttl: Duration,
+    _command: PhantomData<fn() -> C>,
 }
 
-impl<C: Command> IdempotentCommandHandler<C> {
+impl<C, H, S> IdempotentCommandHandler<C, H, S>
+where
+    C: Command,
+    H: CommandHandler<C> + ?Sized,
+    S: IdempotencyStore + ?Sized,
+{
     /// Create a new idempotent handler wrapping `inner`.
-    pub fn new(
-        inner: Arc<dyn CommandHandler<C>>,
-        store: Arc<dyn IdempotencyStore>,
-        ttl: Duration,
-    ) -> Self {
-        Self { inner, store, ttl }
+    pub fn new(inner: Arc<H>, store: Arc<S>, ttl: Duration) -> Self {
+        Self {
+            inner,
+            store,
+            ttl,
+            _command: PhantomData,
+        }
     }
 }
 
 #[async_trait]
-impl<C> CommandHandler<C> for IdempotentCommandHandler<C>
+impl<C, H, S> CommandHandler<C> for IdempotentCommandHandler<C, H, S>
 where
     C: IdempotentCommand + Send + 'static,
+    H: CommandHandler<C> + ?Sized,
+    S: IdempotencyStore + ?Sized,
     C::Response: serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static,
 {
     async fn handle(&self, command: C) -> AppResult<C::Response> {

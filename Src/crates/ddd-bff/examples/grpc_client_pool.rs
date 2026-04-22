@@ -7,12 +7,9 @@ use std::time::Duration;
 async fn main() -> AppResult<()> {
     // 1. Configure resilience parameters
     let resilience = ResilienceConfig {
-        timeout: Duration::from_secs(5),
-        max_retries: 3,
-        initial_backoff_ms: 100,
-        concurrency_limit: 100,
-        rate_limit: 1000,
-        // The pool uses these to wrap the raw tonic channels
+        retry_max_attempts: 3,
+        cb_timeout: Duration::from_secs(5),
+        max_concurrent: 100,
         ..Default::default()
     };
 
@@ -28,16 +25,16 @@ async fn main() -> AppResult<()> {
     // 3. Option B: Fine-grained builder (per-service tuning)
     println!("\n--- Option B: Fine-grained Builder ---");
     let mut tuned_resilience = resilience.clone();
-    tuned_resilience.timeout = Duration::from_secs(30); // Long timeout for heavy service
+    tuned_resilience.cb_timeout = Duration::from_secs(30); // Long timeout for heavy service
 
-    let tuned_pool = GrpcClientPool::builder()
+    let _tuned_pool = GrpcClientPool::builder()
         .add("heavy-report-service", "http://reports:50051", tuned_resilience)?
         .add("fast-ping-service", "http://ping:50051", resilience)?
         .build();
 
     // 4. Retrieving a channel for a gRPC client
     // The channel returned is a 'ResilientChannel' which implements tonic's Service trait
-    let order_channel = pool.channel("order-service")?;
+    let _order_channel = pool.channel("order-service")?;
     println!("Channel for order-service retrieved.");
     
     // Usage: let client = OrderServiceClient::new(order_channel);

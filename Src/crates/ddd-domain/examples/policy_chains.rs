@@ -1,17 +1,15 @@
-use ddd_domain::policy::{PolicyChain, PolicyViolation, ClosurePolicy};
+use ddd_domain::policy::{PolicyChain, PolicyViolation};
 use ddd_domain::policy; // for the policy! macro
 
 struct Order {
     total_amount: f64,
     items_count: usize,
-    status: String,
 }
 
 fn main() {
     let mut order = Order {
         total_amount: 5000.0,
         items_count: 0,
-        status: "Draft".into(),
     };
 
     // Define policies using the macro

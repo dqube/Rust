@@ -38,7 +38,7 @@ impl CommandHandler<CreateProduct> for CreateProductHandler {
 
 #[tokio::main]
 async fn main() -> AppResult<()> {
-    let store = Arc::new(InMemoryIdempotencyStore::new());
+    let store = Arc::new(InMemoryIdempotencyStore::default());
     let inner = Arc::new(CreateProductHandler);
     
     // 3. Wrap the inner handler with the Idempotency Decorator

@@ -27,6 +27,7 @@ use ddd_shared_kernel::{
     idempotency::{IdempotencyRecord, IdempotencyStore},
     inbox::{InboxMessage, InboxRepository},
     outbox::{OutboxMessage, OutboxRepository},
+    saga::{SagaInstance, SagaInstanceRepository, SagaStatus},
     AppError, AppResult,
 };
 use serde_json::Value;
@@ -489,5 +490,82 @@ mod tests {
 
         let none = repo.find_by_origin(DeadLetterOrigin::Inbox, 10).await.unwrap();
         assert!(none.is_empty());
+    }
+}
+
+// ─── InMemorySagaInstanceRepository ──────────────────────────────────────────
+
+/// Thread-safe in-memory implementation of [`SagaInstanceRepository`].
+///
+/// Suitable for unit and integration tests. All operations succeed unless the
+/// id is not found (for `update` / `find_by_id`).
+#[derive(Debug, Default)]
+pub struct InMemorySagaInstanceRepository {
+    instances: Mutex<HashMap<Uuid, SagaInstance>>,
+}
+
+impl InMemorySagaInstanceRepository {
+    /// Return a snapshot of all stored instances.
+    pub fn all(&self) -> Vec<SagaInstance> {
+        self.instances.lock().unwrap().values().cloned().collect()
+    }
+
+    /// Number of stored instances.
+    pub fn len(&self) -> usize {
+        self.instances.lock().unwrap().len()
+    }
+
+    /// True when no instances are stored.
+    pub fn is_empty(&self) -> bool {
+        self.instances.lock().unwrap().is_empty()
+    }
+}
+
+#[async_trait]
+impl SagaInstanceRepository for InMemorySagaInstanceRepository {
+    async fn save(&self, instance: &SagaInstance) -> AppResult<()> {
+        self.instances
+            .lock()
+            .unwrap()
+            .insert(instance.id, instance.clone());
+        Ok(())
+    }
+
+    async fn update(&self, instance: &SagaInstance) -> AppResult<()> {
+        let mut store = self.instances.lock().unwrap();
+        let existing = store.get(&instance.id).ok_or_else(|| AppError::NotFound {
+            resource: "SagaInstance".into(),
+            id: instance.id.to_string(),
+        })?;
+        if existing.version >= instance.version {
+            return Err(AppError::Conflict {
+                message: "version mismatch".into(),
+            });
+        }
+        store.insert(instance.id, instance.clone());
+        Ok(())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> AppResult<SagaInstance> {
+        self.instances
+            .lock()
+            .unwrap()
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| AppError::NotFound {
+                resource: "SagaInstance".into(),
+                id: id.to_string(),
+            })
+    }
+
+    async fn find_by_status(&self, status: SagaStatus) -> AppResult<Vec<SagaInstance>> {
+        Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|s| s.status == status)
+            .cloned()
+            .collect())
     }
 }

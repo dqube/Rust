@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use ddd_application::{
     Command, CommandHandler, Query, QueryHandler, Mediator,

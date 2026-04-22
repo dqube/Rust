@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use ddd_infrastructure::db::{SeaOrmOutboxRepository, SeaOrmDeadLetterRepository, create_pool};
 use ddd_infrastructure::messaging::NatsPublisher;
-use ddd_shared_kernel::{OutboxRelay, NullDeadLetterAlert};
+use ddd_shared_kernel::{OutboxRelay, LogDeadLetterAlert};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,11 +20,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let publisher = Arc::new(NatsPublisher::new(nats));
 
     // 3. Create the Relay
-    let relay = OutboxRelay::new(
+    let _relay = OutboxRelay::new(
         outbox_repo,
         publisher,
         dead_letter_repo,
-        Arc::new(NullDeadLetterAlert),
+        Arc::new(LogDeadLetterAlert),
         10,    // fetch 10 messages per poll
         1000,  // poll every 1000ms
         5,     // move to DLQ after 5 failed attempts

@@ -64,7 +64,7 @@ async fn main() {
         }
     };
 
-    tracing::info!("Starting Admin BFF on {}:{}", config.host, config.port);
+    tracing::info!("Starting Admin BFF on {}:{}", config.bff.host, config.bff.port);
 
     // ── gRPC channels (product + order + shared) via ddd-bff resilient pool ─
     let pool = GrpcClientPool::from_services(
@@ -73,13 +73,23 @@ async fn main() {
             ("order",   config.services.order_service.as_str()),
             ("shared",  config.services.shared_service.as_str()),
         ],
-        &config.resilience,
+        &config.bff.resilience,
     )
     .expect("failed to build gRPC client pool");
 
-    tracing::info!(url = %config.services.product_service, "connected to product-service (lazy)");
-    tracing::info!(url = %config.services.order_service,   "connected to order-service (lazy)");
-    tracing::info!(url = %config.services.shared_service,  "connected to shared-service (lazy)");
+    // Log the ResilientChannel metadata so operators can verify resilience
+    // settings at startup without reading env vars — proves the knobs
+    // configured in BffConfig flow through to every upstream.
+    for svc in ["product", "order", "shared"] {
+        if let Ok(rc) = pool.get(svc) {
+            tracing::info!(
+                service = svc,
+                timeout_ms = rc.timeout().as_millis() as u64,
+                max_concurrent = rc.max_concurrent(),
+                "gRPC channel registered (lazy)"
+            );
+        }
+    }
 
     // ── JWT validation (optional — enabled when JWT_SECRET is set) ───────
     let jwt_validator: Option<Arc<JwtValidator<StandardClaims>>> =
@@ -130,15 +140,15 @@ async fn main() {
     let app = admin_bff::api::router::build_router(state).await;
 
     // ── Serve ────────────────────────────────────────────────────────────
-    let addr: std::net::SocketAddr = format!("{}:{}", config.host, config.port)
+    let addr: std::net::SocketAddr = format!("{}:{}", config.bff.host, config.bff.port)
         .parse()
         .expect("invalid ADMIN_BFF_HOST/ADMIN_BFF_PORT");
 
     tracing::info!(
         addr = %addr,
-        request_timeout = ?config.request_timeout,
+        request_timeout = ?config.bff.request_timeout,
         "Admin BFF listening | docs at http://0.0.0.0:{}/scalar",
-        config.port,
+        config.bff.port,
     );
 
     let listener = tokio::net::TcpListener::bind(addr)

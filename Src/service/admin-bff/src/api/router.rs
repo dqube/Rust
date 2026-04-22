@@ -107,7 +107,7 @@ pub async fn build_router(state: AppState) -> Router {
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
     let obs_state = ObservabilityState {
-        redact_fields: std::sync::Arc::new(state.config.redact_fields.clone()),
+        redact_fields: std::sync::Arc::new(state.config.bff.redact_fields.clone()),
         log_bodies,
     };
 
@@ -127,5 +127,5 @@ pub async fn build_router(state: AppState) -> Router {
         // Catch panics
         .layer(CatchPanicLayer::new())
         // Per-request timeout — outermost layer so it covers the full lifecycle
-        .layer(TimeoutLayer::with_status_code(axum::http::StatusCode::REQUEST_TIMEOUT, state.config.request_timeout))
+        .layer(TimeoutLayer::with_status_code(axum::http::StatusCode::REQUEST_TIMEOUT, state.config.bff.request_timeout))
 }

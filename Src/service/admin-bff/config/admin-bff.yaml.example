@@ -1,0 +1,50 @@
+# admin-bff configuration
+#
+# Copy to `admin-bff.yaml` (the default path the service looks at) or set
+# `ADMIN_BFF_CONFIG=/abs/path/to/this.yaml`.
+#
+# Load order: built-in defaults → this file → environment variables.
+# Environment variables override values here, so deploy-time overrides do
+# not require editing the file.
+#
+# Every field is optional: omit to keep the default shown in comments.
+
+# Public bind address for the REST edge. [default: 0.0.0.0]
+# host: 0.0.0.0
+# port: 3001                    # env: ADMIN_BFF_PORT
+
+services:
+  order_service:   http://localhost:8080    # env: ORDER_SERVICE_URL
+  product_service: http://localhost:50052   # env: PRODUCT_SERVICE_URL
+  shared_service:  http://localhost:50053   # env: SHARED_SERVICE_URL
+
+resilience:
+  timeout_ms:     5000    # env: GRPC_TIMEOUT_MS
+  max_concurrent: 100     # env: GRPC_MAX_CONCURRENT
+
+# Field names scrubbed from request/response logs (case-insensitive).
+redact_fields:
+  - password
+  - secret
+  - token
+  - authorization
+
+shutdown_timeout_secs: 30   # env: SHUTDOWN_TIMEOUT_SECS
+request_timeout_secs:  30   # env: REQUEST_TIMEOUT_SECS
+
+# OpenTelemetry OTLP exporter endpoint. Leave unset to disable.
+# otlp_endpoint: http://localhost:4317     # env: OTLP_ENDPOINT
+
+# JWT bearer-token authentication.
+# Leave `secret` empty to disable auth entirely (development only).
+auth:
+  secret:      ""          # env: JWT_SECRET  (>= 32 bytes for HS256)
+  issuer:      ""          # env: JWT_ISSUER
+  audience:    admin-bff   # env: JWT_AUDIENCE
+  leeway_secs: 30          # env: JWT_LEEWAY_SECS
+
+# Redis read-through cache. Leave `redis_url` empty to disable.
+cache:
+  redis_url:                ""           # env: REDIS_URL
+  key_prefix:               adminbff     # env: REDIS_KEY_PREFIX
+  catalog_summary_ttl_secs: 30           # env: CACHE_CATALOG_SUMMARY_TTL_SECS

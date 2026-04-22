@@ -17,10 +17,6 @@ pub struct BffConfig {
     pub host: String,
     /// Public edge bind port (default: `3000`).
     pub port: u16,
-    /// Loopback port for the Prometheus scrape server (default: `9090`).
-    pub metrics_port: u16,
-    /// Path to the YAML route table (default: `config/routes.yaml`).
-    pub routes_path: String,
     /// Default resilience parameters applied to outgoing gRPC calls.
     pub resilience: ResilienceConfig,
     /// Comma-separated field names to redact from request/response logs.
@@ -74,8 +70,6 @@ impl BffConfig {
     /// |---------------------------|------------------------|-------------------|
     /// | `BFF_HOST`                | `0.0.0.0`              | `host`            |
     /// | `BFF_PORT`                | `3000`                 | `port`            |
-    /// | `BFF_METRICS_PORT`        | `9090`                 | `metrics_port`    |
-    /// | `BFF_ROUTES_PATH`         | `config/routes.yaml`   | `routes_path`     |
     /// | `GRPC_TIMEOUT_MS`         | `5000`                 | `resilience.timeout` |
     /// | `GRPC_RETRY_MAX_ATTEMPTS` | `3`                    | `resilience.retry_max_attempts` |
     /// | `GRPC_CB_FAILURE_THRESHOLD` | `5`                  | `resilience.cb_failure_threshold` |
@@ -90,8 +84,6 @@ impl BffConfig {
         Self {
             host: env_or("BFF_HOST", "0.0.0.0"),
             port: env_or("BFF_PORT", "3000").parse().unwrap_or(3000),
-            metrics_port: env_or("BFF_METRICS_PORT", "9090").parse().unwrap_or(9090),
-            routes_path: env_or("BFF_ROUTES_PATH", "config/routes.yaml"),
             resilience: ResilienceConfig {
                 timeout: Duration::from_millis(
                     env_or("GRPC_TIMEOUT_MS", "5000").parse().unwrap_or(5000),

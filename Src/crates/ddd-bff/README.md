@@ -14,10 +14,11 @@ For full implementation details, see:
 |---|---|
 | `clients` | `GrpcClientPool` keyed by service name + `ResilientChannel` |
 | `config` | Generic `BffConfig` (host, timeouts, resilience, redaction) |
-| `edge` | `routes.yaml` router, hyper service, accept loop, observability |
-| `transcode` | REST↔gRPC conversion, SSE streaming, error mapping |
+| `edge` | Graceful shutdown signal handlers |
+| `transcode` | gRPC `Status` → `AppError` → RFC 9457 `ProblemDetail` mapping |
 | `metrics` | `BFF_METRICS` Prometheus singleton + `metrics_handler` |
-| `openapi::api_routes` | `ApiRoute`, `RouteKind`, `inject_routes` — declarative catalogue |
+| `middleware` | Axum observability, tracing, audit, body redaction, JWT auth |
+| `openapi` | `ApiRoute`, `RouteKind`, `inject_routes`, Scalar router, downstream spec merge |
 | `proxy` | `ProxyState` + `proxy_handler` — generic HTTP reverse proxy |
 
 ## Examples

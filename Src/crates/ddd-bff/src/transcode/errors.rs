@@ -2,7 +2,8 @@
 //! [`ProblemDetail`].
 //!
 //! Transport-free: produces `(status_code, content_type, body_bytes)` — the
-//! edge and pingora hooks render it onto whatever response type they own.
+//! axum layer renders it onto a response via the `IntoResponse` impl gated
+//! on the `axum-response` feature.
 
 use ddd_shared_kernel::AppError;
 use serde::Serialize;
@@ -283,6 +284,4 @@ mod tests {
         assert!(text.contains("\"status\":404"));
     }
 }
-
-// ─── axum fallback handler ───────────────────────────────────────────────────
 

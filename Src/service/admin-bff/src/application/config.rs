@@ -106,11 +106,6 @@ impl AdminBffConfig {
             bff: BffConfig {
                 host: "0.0.0.0".into(),
                 port: 3001,
-                // Admin-bff mounts /metrics on the main router; these two
-                // BffConfig fields belong to the config-driven edge and are
-                // unused here.
-                metrics_port: 9090,
-                routes_path: String::new(),
                 resilience: ResilienceConfig {
                     timeout: Duration::from_millis(5000),
                     max_concurrent: 100,

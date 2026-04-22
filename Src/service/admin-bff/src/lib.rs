@@ -1,14 +1,15 @@
 //! Admin BFF — REST gateway proxying product-service via gRPC
-//! and order-service via HTTP, with observability and metrics.
+//! and order-service via gRPC, with observability and metrics.
+//!
+//! Layered per the project's clean-architecture convention:
+//!
+//! - [`api`] — inbound REST adapter (router, OpenAPI, handlers).
+//! - [`application`] — configuration and shared state.
+//! - [`infrastructure`] — outbound gRPC clients to downstream services.
 
-pub mod aggregation;
-pub mod clients;
-pub mod config;
-pub mod handlers;
-pub mod openapi;
-pub mod openapi_routes;
-pub mod router;
-pub mod state;
+pub mod api;
+pub mod application;
+pub mod infrastructure;
 
 pub mod proto {
     tonic::include_proto!("product.v1");

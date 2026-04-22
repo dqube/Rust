@@ -13,7 +13,7 @@ use serde::Serialize;
 
 use ddd_bff::prelude::*;
 
-use crate::state::AppState;
+use crate::application::state::AppState;
 use crate::proto;
 
 /// Aggregated catalog summary.

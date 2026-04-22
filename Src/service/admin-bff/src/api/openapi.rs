@@ -8,8 +8,8 @@ use utoipa::OpenApi;
 
 use ddd_bff::transcode::ProblemDetail;
 
-use crate::aggregation::{BatchRequest, BatchResponse, BatchResult};
-use crate::handlers::products::{ConfirmImageBody, ImageUploadUrlBody};
+use crate::api::rest::batch_orders::{BatchRequest, BatchResponse, BatchResult};
+use crate::api::rest::products::{ConfirmImageBody, ImageUploadUrlBody};
 use crate::proto::{
     ConfirmImageUploadRequest, ConfirmImageUploadResponse, CreateProductRequest,
     CreateProductResponse, DeactivateProductRequest, DeactivateProductResponse, GetProductRequest,

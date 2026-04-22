@@ -20,7 +20,7 @@ use tracing_subscriber::{
     layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer,
 };
 
-use admin_bff::config::AdminBffConfig;
+use admin_bff::application::config::AdminBffConfig;
 
 #[tokio::main]
 async fn main() {
@@ -98,10 +98,10 @@ async fn main() {
     }
 
     // ── Unified AppState ──────────────────────────────────────────────────
-    let state = admin_bff::state::AppState::new(config.clone(), pool, jwt_validator);
+    let state = admin_bff::application::state::AppState::new(config.clone(), pool, jwt_validator);
 
     // ── Build Router ─────────────────────────────────────────────────────
-    let app = admin_bff::router::build_router(state).await;
+    let app = admin_bff::api::router::build_router(state).await;
 
     // ── Serve ────────────────────────────────────────────────────────────
     let addr: std::net::SocketAddr = format!("{}:{}", config.host, config.port)

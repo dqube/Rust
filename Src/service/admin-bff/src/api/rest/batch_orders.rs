@@ -12,7 +12,7 @@ use ddd_bff::prelude::*;
 
 use crate::proto_order::GetOrderRequest;
 
-use crate::state::AppState;
+use crate::application::state::AppState;
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct BatchRequest {

@@ -9,12 +9,13 @@ use ddd_bff::openapi::{inject_routes, merged_openapi, openapi_router};
 use ddd_bff::transcode::fallback_handler;
 use ddd_shared_kernel::jwt::StandardClaims;
 
-use crate::aggregation::batch_get_orders;
-use crate::handlers::orders;
-use crate::handlers::products;
-use crate::openapi::AdminApiDoc;
-use crate::openapi_routes::API_ROUTES;
-use crate::state::AppState;
+use crate::api::openapi::AdminApiDoc;
+use crate::api::openapi_routes::API_ROUTES;
+use crate::api::rest::batch_orders::batch_get_orders;
+use crate::api::rest::catalog_summary::get_catalog_summary;
+use crate::api::rest::orders;
+use crate::api::rest::products;
+use crate::application::state::AppState;
 use ddd_bff::middleware::axum_auth::jwt_auth_layer;
 
 pub async fn build_router(state: AppState) -> Router {
@@ -38,7 +39,7 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/products/{id}/deactivate", put(products::deactivate_product))
         .route("/admin/products/{id}/image-upload-url", post(products::request_image_upload_url))
         .route("/admin/products/{id}/confirm-image", post(products::confirm_image_upload))
-        .route("/admin/catalog/summary", get(crate::handlers::aggregation::get_catalog_summary));
+        .route("/admin/catalog/summary", get(get_catalog_summary));
 
     // Order batch aggregation (gRPC fan-out — registered before order_routes so /batch wins)
     let aggregation_routes = Router::new()

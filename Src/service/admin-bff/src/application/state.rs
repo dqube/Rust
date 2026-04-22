@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use ddd_bff::clients::GrpcClientPool;
 use ddd_shared_kernel::jwt::{JwtValidator, StandardClaims};
-use crate::config::AdminBffConfig;
-use crate::clients::order::OrderClient;
-use crate::clients::product::ProductClient;
+use crate::application::config::AdminBffConfig;
+use crate::infrastructure::clients::order::OrderClient;
+use crate::infrastructure::clients::product::ProductClient;
 
 /// Unified shared state for all handlers.
 #[derive(Clone)]

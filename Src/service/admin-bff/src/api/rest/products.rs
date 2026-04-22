@@ -28,7 +28,7 @@ use crate::proto::{
 // re-export for OpenAPI schema reference in main.rs
 pub use crate::proto;
 
-use crate::state::AppState;
+use crate::application::state::AppState;
 
 // -- Helpers ------------------------------------------------------------------
 

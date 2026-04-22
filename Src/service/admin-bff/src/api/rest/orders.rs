@@ -19,7 +19,7 @@ use crate::proto_order::{
     ListOrdersRequest,
 };
 
-use crate::state::AppState;
+use crate::application::state::AppState;
 
 // -- Helpers ------------------------------------------------------------------
 

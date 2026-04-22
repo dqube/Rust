@@ -23,7 +23,7 @@ pub const LOCKOUT_MINUTES: i64 = 30;
 
 // ── User ────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct User {
     pub id: UserId,
     pub username: String,
@@ -46,6 +46,33 @@ pub struct User {
 
     #[doc(hidden)]
     pub domain_events: Vec<Box<dyn DomainEvent>>,
+}
+
+impl Clone for User {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            username: self.username.clone(),
+            email: self.email.clone(),
+            email_confirmed: self.email_confirmed,
+            phone_number: self.phone_number.clone(),
+            phone_number_confirmed: self.phone_number_confirmed,
+            password_hash: self.password_hash.clone(),
+            security_stamp: self.security_stamp.clone(),
+            user_type: self.user_type,
+            two_factor_enabled: self.two_factor_enabled,
+            two_factor_secret: self.two_factor_secret.clone(),
+            is_active: self.is_active,
+            is_locked: self.is_locked,
+            lockout_end: self.lockout_end,
+            failed_login_attempts: self.failed_login_attempts,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+            last_login_at: self.last_login_at,
+            // Domain events are runtime side effects and are intentionally not cloned.
+            domain_events: Vec::new(),
+        }
+    }
 }
 
 impl User {
@@ -269,7 +296,7 @@ impl Role {
 
 // ── UserRole ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UserRole {
     pub id: UserRoleId,
     pub user_id: UserId,
@@ -280,6 +307,21 @@ pub struct UserRole {
 
     #[doc(hidden)]
     pub domain_events: Vec<Box<dyn DomainEvent>>,
+}
+
+impl Clone for UserRole {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            user_id: self.user_id,
+            role_id: self.role_id,
+            assigned_by: self.assigned_by,
+            assigned_at: self.assigned_at,
+            expires_at: self.expires_at,
+            // Domain events are runtime side effects and are intentionally not cloned.
+            domain_events: Vec::new(),
+        }
+    }
 }
 
 impl UserRole {

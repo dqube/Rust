@@ -113,6 +113,8 @@ async fn issue_login(
     user.record_successful_login();
     deps.user_repo.save(&user).await?;
 
+    let is_locked = user.is_locked_out();
+
     Ok(LoginResult {
         tokens,
         user_id: user.id,
@@ -122,7 +124,7 @@ async fn issue_login(
         user_type: user.user_type,
         two_factor_enabled: user.two_factor_enabled,
         is_active: user.is_active,
-        is_locked: user.is_locked_out(),
+        is_locked,
         created_at: user.created_at,
     })
 }

@@ -73,7 +73,7 @@ pub struct JwtTokenService {
 
 impl JwtTokenService {
     pub fn new(cfg: JwtTokenServiceConfig) -> AppResult<Self> {
-        if cfg.secret.as_bytes().len() < 32 {
+        if cfg.secret.len() < 32 {
             return Err(AppError::internal(
                 "JWT secret must be at least 32 bytes for HS256",
             ));
@@ -138,7 +138,7 @@ impl TokenService for JwtTokenService {
 
     fn hash_token(&self, token: &str) -> String {
         let mut hasher = Sha256::new();
-        hasher.update(token.as_bytes());
+        hasher.update(token);
         URL_SAFE_NO_PAD.encode(hasher.finalize())
     }
 }

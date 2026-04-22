@@ -21,7 +21,7 @@ use std::time::Instant;
 
 use axum::body::Body;
 use axum::extract::{ConnectInfo, State};
-use axum::http::{Request, HeaderMap, HeaderValue};
+use axum::http::{Extensions, HeaderMap, HeaderValue, Request};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use http_body_util::BodyExt;
@@ -217,7 +217,7 @@ fn extract_header(headers: &HeaderMap, name: &str) -> Option<String> {
 
 fn extract_client_ip(
     headers: &HeaderMap,
-    extensions: &http::Extensions,
+    extensions: &Extensions,
 ) -> String {
     // Prefer X-Forwarded-For (first entry) when behind a reverse proxy.
     if let Some(forwarded) = extract_header(headers, FORWARDED_FOR_HEADER) {

@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use ddd_api::grpc::error::GrpcErrorExt;
 use ddd_application::Mediator;
+use ddd_shared_kernel::AppError;
 use tonic::{Request, Response, Status};
 
 use crate::application::commands::{
@@ -48,6 +49,16 @@ impl AuthGrpcService {
     }
     pub fn into_server(self) -> AuthServiceServer<Self> {
         AuthServiceServer::new(self)
+    }
+}
+
+trait MapGrpcStatusExt<T> {
+    fn map_grpc_status(self) -> Result<T, Status>;
+}
+
+impl<T> MapGrpcStatusExt<T> for Result<T, AppError> {
+    fn map_grpc_status(self) -> Result<T, Status> {
+        self.map_err(|e| e.to_grpc_status())
     }
 }
 

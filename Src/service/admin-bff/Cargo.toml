@@ -11,8 +11,9 @@ name = "admin-bff"
 path = "src/main.rs"
 
 [dependencies]
-ddd-shared-kernel = { workspace = true, features = ["jwt"] }
-ddd-bff           = { workspace = true, features = ["axum-response", "jwt"] }
+ddd-shared-kernel  = { workspace = true, features = ["jwt"] }
+ddd-bff            = { workspace = true, features = ["axum-response", "jwt"] }
+ddd-infrastructure = { workspace = true, features = ["cache"] }
 
 # REST / HTTP
 axum       = { workspace = true }

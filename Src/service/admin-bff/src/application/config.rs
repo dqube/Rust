@@ -31,6 +31,18 @@ pub struct AdminBffConfig {
     pub shutdown_timeout: Duration,
     pub request_timeout: Duration,
     pub auth: AuthConfig,
+    pub cache: CacheConfig,
+}
+
+/// Cache (Redis) configuration.
+///
+/// When `redis_url` is empty the cache layer is not constructed and the BFF
+/// runs without read-through caching (development mode).
+#[derive(Debug, Clone)]
+pub struct CacheConfig {
+    pub redis_url: String,
+    pub key_prefix: String,
+    pub catalog_summary_ttl: Duration,
 }
 
 /// JWT bearer-token authentication settings.
@@ -110,6 +122,16 @@ impl AdminBffConfig {
                 issuer: env_or("JWT_ISSUER", ""),
                 audience: env_or("JWT_AUDIENCE", "admin-bff"),
                 leeway_secs: parse_env("JWT_LEEWAY_SECS", "30", 30, report),
+            },
+            cache: CacheConfig {
+                redis_url: env_or("REDIS_URL", ""),
+                key_prefix: env_or("REDIS_KEY_PREFIX", "adminbff"),
+                catalog_summary_ttl: Duration::from_secs(parse_env(
+                    "CACHE_CATALOG_SUMMARY_TTL_SECS",
+                    "30",
+                    30,
+                    report,
+                )),
             },
         }
     }
@@ -269,6 +291,11 @@ mod tests {
                 issuer: String::new(),
                 audience: "admin-bff".into(),
                 leeway_secs: 30,
+            },
+            cache: CacheConfig {
+                redis_url: String::new(),
+                key_prefix: "adminbff".into(),
+                catalog_summary_ttl: Duration::from_secs(30),
             },
         }
     }

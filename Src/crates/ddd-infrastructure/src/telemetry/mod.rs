@@ -2,10 +2,12 @@
 //! metrics.
 
 pub mod logging;
+pub mod logs;
 pub mod metrics;
 pub mod tracing;
 
 pub use logging::init_logging;
+pub use logs::{init_log_pipeline, shutdown_logs};
 pub use metrics::{init_metrics, metrics_handler, Metrics};
 pub use tracing::{init_tracing, shutdown_tracing};
 

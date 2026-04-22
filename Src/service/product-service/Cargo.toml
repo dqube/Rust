@@ -11,10 +11,11 @@ name = "product-service"
 path = "src/main.rs"
 
 [dependencies]
-ddd-shared-kernel = { workspace = true }
-ddd-domain        = { workspace = true }
-ddd-application   = { workspace = true }
-ddd-api           = { workspace = true, features = ["grpc"] }
+ddd-shared-kernel  = { workspace = true }
+ddd-domain         = { workspace = true }
+ddd-application    = { workspace = true }
+ddd-api            = { workspace = true, features = ["grpc"] }
+ddd-infrastructure = { workspace = true, features = ["storage"] }
 
 # gRPC
 tonic     = { workspace = true }

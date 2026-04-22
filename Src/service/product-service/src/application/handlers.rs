@@ -1,17 +1,17 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use ddd_application::{
     register_command_handler, register_query_handler, CommandHandler, QueryHandler,
 };
-use ddd_shared_kernel::{AggregateRoot, AppError, AppResult, Page, PageRequest};
+use ddd_shared_kernel::{AggregateRoot, AppError, AppResult, BlobStorage, Page, PageRequest};
 
 use super::commands::{
     ConfirmImageUpload, CreateProduct, DeactivateProduct, RequestImageUploadUrl, UpdateStock,
 };
 use super::deps::AppDeps;
 use super::queries::{GetProduct, ListProducts};
-use crate::application::ports::StoragePort;
 use crate::domain::aggregate::Product;
 use crate::domain::events::ProductId;
 #[allow(unused_imports)]
@@ -118,7 +118,9 @@ register_query_handler!(ListProducts, AppDeps, |deps: &AppDeps| {
 
 pub struct RequestImageUploadUrlHandler {
     repo: Arc<dyn ProductRepository>,
-    storage: Arc<dyn StoragePort>,
+    storage: Arc<dyn BlobStorage>,
+    bucket: String,
+    ttl: Duration,
 }
 
 #[async_trait]
@@ -131,9 +133,14 @@ impl CommandHandler<RequestImageUploadUrl> for RequestImageUploadUrlHandler {
             .ok_or_else(|| AppError::not_found("Product", cmd.product_id.to_string()))?;
 
         let object_key = format!("products/{}/{}", cmd.product_id, cmd.filename);
-        self.storage
-            .presigned_upload_url(&object_key, &cmd.content_type)
-            .await
+        let presigned = self
+            .storage
+            .presigned_put(&self.bucket, &object_key, &cmd.content_type, self.ttl)
+            .await?;
+        // u32 cap is intentional — callers don't need sub-second precision and
+        // a TTL longer than ~136 years would be a configuration bug.
+        let expires_in_secs = u32::try_from(self.ttl.as_secs()).unwrap_or(u32::MAX);
+        Ok((presigned.url, expires_in_secs))
     }
 }
 
@@ -141,6 +148,8 @@ register_command_handler!(RequestImageUploadUrl, AppDeps, |deps: &AppDeps| {
     RequestImageUploadUrlHandler {
         repo: deps.product_repo.clone(),
         storage: deps.storage.clone(),
+        bucket: deps.image_bucket.clone(),
+        ttl: deps.presign_ttl,
     }
 });
 

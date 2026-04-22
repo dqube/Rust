@@ -27,3 +27,5 @@ Thumbs.db
 # Ignore graphify cache
 **/graphify-out/
 
+# Ignore legacy infrastructure crate
+

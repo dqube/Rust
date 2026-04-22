@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use ddd_bff::clients::GrpcClientPool;
 use ddd_shared_kernel::jwt::{JwtValidator, StandardClaims};
+use ddd_shared_kernel::Cache;
 use crate::application::config::AdminBffConfig;
 use crate::infrastructure::clients::order::OrderClient;
 use crate::infrastructure::clients::product::ProductClient;
@@ -13,6 +14,8 @@ pub struct AppState {
     pub order_client: Arc<OrderClient>,
     pub jwt_validator: Option<Arc<JwtValidator<StandardClaims>>>,
     pub order_channel: tonic::transport::Channel,
+    /// Optional read-through cache. `None` when `REDIS_URL` is unset.
+    pub cache: Option<Arc<dyn Cache>>,
 }
 
 impl AppState {
@@ -20,6 +23,7 @@ impl AppState {
         config: AdminBffConfig,
         pool: GrpcClientPool,
         jwt_validator: Option<Arc<JwtValidator<StandardClaims>>>,
+        cache: Option<Arc<dyn Cache>>,
     ) -> Self {
         let product_channel = pool
             .channel("product")
@@ -34,6 +38,7 @@ impl AppState {
             order_client: Arc::new(OrderClient::new(order_channel.clone())),
             jwt_validator,
             order_channel, // Used for aggregation fan-out
+            cache,
         }
     }
 }

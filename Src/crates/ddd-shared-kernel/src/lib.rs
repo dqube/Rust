@@ -14,6 +14,7 @@
 //! | [`entity`] | [`Entity`] and [`ValueObject`] marker traits |
 //! | [`value_object`] | [`impl_value_object!`] macro helper |
 //! | [`error`] | [`AppError`], [`AppResult`], [`ValidationFieldError`] |
+//! | [`blob_storage`] | [`BlobStorage`] port + [`PresignedUrl`] for object storage |
 //! | [`pagination`] | [`Page<T>`] and [`PageRequest`] |
 //! | [`outbox`] | [`OutboxMessage`], [`OutboxRepository`], [`OutboxRelay`] |
 //! | [`inbox`] | [`InboxMessage`], [`InboxRepository`], [`InboxProcessor`] |
@@ -38,6 +39,8 @@
 // ─── Modules ─────────────────────────────────────────────────────────────────
 
 pub mod aggregate;
+pub mod blob_storage;
+pub mod cache;
 pub mod dead_letter;
 pub mod domain_event;
 pub mod entity;
@@ -49,6 +52,7 @@ pub mod integration_event;
 pub mod outbox;
 pub mod pagination;
 pub mod saga;
+pub mod security;
 pub mod validation;
 pub mod value_object;
 
@@ -64,6 +68,15 @@ pub use id::TypedId;
 
 // aggregate
 pub use aggregate::AggregateRoot;
+
+// blob storage
+pub use blob_storage::{BlobStorage, PresignedUrl};
+
+// cache
+pub use cache::{Cache, CacheExt};
+
+// security
+pub use security::{Cipher, Hasher};
 
 // domain event
 pub use domain_event::{DomainEvent, DomainEventDispatcher, DomainEventEnvelope};

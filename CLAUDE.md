@@ -9,7 +9,7 @@ This repo implements reusable DDD (Domain-Driven Design) building blocks for Rus
 - `ddd-sharedkernel` (package name: `ddd-shared-kernel`) — zero-dependency base: `AppError`/`AppResult`, ids, pagination (`Page`, `PageRequest`), outbox/inbox, dead-letter queue, idempotency store, saga types/ports, validation primitives, domain events, integration events.
 - `ddd-domain` — aggregates, entities, repositories (ports), specifications, policies, domain services. Depends only on `ddd-shared-kernel`.
 - `ddd-application` — CQRS (`Command`/`Query`), `Mediator` (inventory-based dispatch), use cases, `UnitOfWork`, ports, validation, pagination, event handling, `IdempotentCommandHandler`, `DefaultSagaOrchestrator`, `SagaDefinitionRegistry`. Depends on `ddd-shared-kernel`.
-- `ddd-infrastructure` — adapters: SeaORM/sqlx (Postgres) repositories (outbox, inbox, dead-letter, idempotency, saga), NATS messaging, OpenTelemetry + Prometheus telemetry. Depends on `ddd-shared-kernel` + `ddd-application`.
+- `ddd-infrastructure` — adapters: SeaORM/sqlx (Postgres) repositories (outbox, inbox, dead-letter, idempotency, saga), NATS messaging (core + JetStream), S3-compatible blob storage (`S3BlobStorage`), Redis cache (`RedisCache`), security (`Pbkdf2Hasher`, `AesGcmCipher`), OpenTelemetry traces + logs + Prometheus telemetry. Depends on `ddd-shared-kernel` + `ddd-application`.
 - `ddd-api` — gRPC (tonic) + REST (axum) building blocks: interceptors, middleware, error mapping (`AppError` → `tonic::Status` / RFC 9457 Problem Details with `FieldViolation`), global exception handlers, health/readiness probes, graceful shutdown, idempotency key extractors, pagination DTOs, OpenAPI/Scalar. Depends on `ddd-shared-kernel` + `ddd-application`.
 - `ddd-bff` — **library crate** for BFF gateways. gRPC client pool (`GrpcClientPool`, `ResilientChannel`), generic HTTP proxy (`ProxyState`, `proxy_handler`), axum observability middleware, Prometheus metrics (`BFF_METRICS`, `metrics_handler`), declarative OpenAPI catalogue (`ApiRoute`, `inject_routes`), Scalar router (`openapi_router`), downstream spec merge (`merged_openapi`), graceful shutdown (`wait_for_shutdown_signal`), body redaction. Depends only on `ddd-shared-kernel`.
 
@@ -56,7 +56,7 @@ Feature flags worth knowing:
 |-------|----------|
 | `ddd-shared-kernel` | `validation`, `grpc`, `jwt`, `config-validation` |
 | `ddd-domain`, `ddd-application` | `tracing` (`validation` on application) |
-| `ddd-infrastructure` | `postgres`, `nats`, `telemetry` (all default), `full` |
+| `ddd-infrastructure` | `postgres`, `nats`, `nats-jetstream`, `storage`, `crypto`, `cache`, `telemetry` (all default), `full` |
 | `ddd-api` | `grpc`, `rest`, `openapi` (all default), `telemetry`, `jwt`, `full` |
 | `ddd-bff` | `axum-response` (enables `proxy`, `openapi::router`, `openapi::merge`, `middleware::axum_observability`, `prelude`); `jwt` (implies `axum-response`) |
 
@@ -84,7 +84,23 @@ Do **not** register handlers from `main.rs`. Do **not** hand-write `inventory::s
 
 ### Outbox / Inbox
 
-Integration events go through the outbox, never `mediator.publish`. Inside a command handler, persist aggregate + append `OutboxMessage` in the same `UnitOfWork` transaction. `OutboxRelay` publishes to NATS. `InboxProcessor` deduplicates at the consumer.
+Integration events go through the outbox, never `mediator.publish`. Inside a command handler, persist aggregate + append `OutboxMessage` in the same `UnitOfWork` transaction. `OutboxRelay` publishes via an `IntegrationEventPublisher` — either `NatsPublisher` (core NATS, fire-and-forget) or `JetStreamPublisher` (durable, at-least-once; feature `nats-jetstream`). See `Src/crates/ddd-infrastructure/examples/outbox_relay_setup.rs` and `outbox_relay_jetstream.rs`. `InboxProcessor` deduplicates at the consumer.
+
+### Blob Storage
+
+`BlobStorage` port in `ddd-shared-kernel` exposes `presigned_put` / `presigned_get` returning `PresignedUrl { url, expires_at }`. The `S3BlobStorage` adapter (`ddd-infrastructure`, feature `storage`) targets AWS S3, MinIO, SeaweedFS — see `S3Config::endpoint` + `force_path_style` for S3-compatible servers. `product-service` uses it to mint product image upload URLs (configured via `S3_*` env vars + `PRODUCT_IMAGE_BUCKET` + `PRODUCT_PRESIGN_TTL_SECS`).
+
+### Cache
+
+`Cache` port (`get_raw` / `set_raw` / `delete`) plus `CacheExt` blanket trait (JSON `get` / `set` / `get_or_set`) in `ddd-shared-kernel`. `RedisCache` adapter (`ddd-infrastructure`, feature `cache`) supports best-effort (`connect`) and strict (`connect_strict`) semantics with prefixed keys. `admin-bff` opts in via `REDIS_URL` and uses it as a read-through cache for `/admin/catalog/summary` (TTL: `CACHE_CATALOG_SUMMARY_TTL_SECS`, default 30 s).
+
+### Security
+
+`Hasher` (sync, password hashing/verification) and `Cipher` (async, authenticated encryption) ports in `ddd-shared-kernel`. Adapters in `ddd-infrastructure` (feature `crypto`): `Pbkdf2Hasher` (PBKDF2-HMAC-SHA256, PHC string format) and `AesGcmCipher` (AES-256-GCM with a 12-byte random nonce prepended to the ciphertext).
+
+### Telemetry
+
+Traces and logs both export via OTLP/gRPC. `init_log_pipeline(service_name)` in `ddd-infrastructure::telemetry::logs` is idempotent and shutdown via `shutdown_logs()`. `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4317`) drives both spans and logs; set `OTEL_LOGS_EXPORTER=none` to disable log export for local dev. The panic hook installed by `install_panic_hook()` flushes both pipelines before re-raising.
 
 ### Dead Letter Queue
 

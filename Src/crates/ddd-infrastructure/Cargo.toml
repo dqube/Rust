@@ -7,11 +7,15 @@ license.workspace = true
 rust-version.workspace = true
 
 [features]
-default   = ["postgres", "nats", "telemetry"]
-full      = ["postgres", "nats", "telemetry"]
-postgres  = []
-nats      = []
-telemetry = []
+default        = ["postgres", "nats", "telemetry"]
+full           = ["postgres", "nats", "nats-jetstream", "telemetry", "storage", "crypto", "cache"]
+postgres       = []
+nats           = []
+nats-jetstream = ["nats"]
+telemetry      = []
+storage        = ["dep:aws-sdk-s3", "dep:aws-config", "dep:aws-credential-types"]
+crypto         = ["dep:pbkdf2", "dep:aes-gcm", "dep:rand", "dep:base64"]
+cache          = ["dep:redis"]
 
 [dependencies]
 ddd-shared-kernel = { workspace = true }
@@ -29,6 +33,7 @@ opentelemetry                      = { workspace = true }
 opentelemetry_sdk                  = { workspace = true }
 opentelemetry-otlp                 = { workspace = true }
 opentelemetry-semantic-conventions = { workspace = true }
+opentelemetry-appender-tracing     = { workspace = true }
 
 prometheus  = { workspace = true }
 lazy_static = { workspace = true }
@@ -41,6 +46,21 @@ uuid       = { workspace = true }
 thiserror  = { workspace = true }
 futures    = { workspace = true }
 tokio      = { workspace = true }
+bytes      = { workspace = true }
+
+# Object storage (feature = "storage")
+aws-sdk-s3           = { workspace = true, optional = true }
+aws-config           = { workspace = true, optional = true }
+aws-credential-types = { workspace = true, optional = true }
+
+# Cryptography (feature = "crypto")
+pbkdf2  = { workspace = true, optional = true }
+aes-gcm = { workspace = true, optional = true }
+rand    = { workspace = true, optional = true }
+base64  = { workspace = true, optional = true }
+
+# Cache (feature = "cache")
+redis = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

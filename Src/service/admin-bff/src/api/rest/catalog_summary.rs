@@ -9,15 +9,16 @@
 
 use axum::extract::State;
 use axum::Json;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use ddd_bff::prelude::*;
+use ddd_shared_kernel::CacheExt;
 
 use crate::application::state::AppState;
 use crate::proto;
 
 /// Aggregated catalog summary.
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CatalogSummary {
     /// Total number of products.
     pub total_products: u64,
@@ -53,6 +54,24 @@ pub struct CatalogSummary {
 pub async fn get_catalog_summary(
     State(state): State<AppState>,
 ) -> Result<Json<CatalogSummary>, ProblemDetail> {
+    // Read-through cache when configured. The closure is only invoked on a
+    // miss, and write-back is best-effort (a failed SET never fails the call).
+    if let Some(cache) = state.cache.clone() {
+        let ttl = state.config.cache.catalog_summary_ttl;
+        let summary = cache
+            .get_or_set::<CatalogSummary, _, _>("catalog:summary", ttl, || async move {
+                fetch_catalog_summary(&state).await
+            })
+            .await
+            .into_problem()?;
+        return Ok(Json(summary));
+    }
+    fetch_catalog_summary(&state).await.into_problem().map(Json)
+}
+
+async fn fetch_catalog_summary(
+    state: &AppState,
+) -> ddd_shared_kernel::AppResult<CatalogSummary> {
     // Fetch a large page to get the full catalog for aggregation.
     let mut client = state.product_client.client();
     let resp = client
@@ -61,7 +80,7 @@ pub async fn get_catalog_summary(
             per_page: 1000,
         })
         .await
-        .into_problem()?;
+        .map_err(ddd_bff::transcode::grpc_status_to_app_error)?;
 
     let list = resp.into_inner();
     let products = &list.products;
@@ -73,7 +92,7 @@ pub async fn get_catalog_summary(
     let min_price = products.iter().map(|p| p.price).reduce(f64::min);
     let max_price = products.iter().map(|p| p.price).reduce(f64::max);
 
-    Ok(Json(CatalogSummary {
+    Ok(CatalogSummary {
         total_products: list.total,
         active_count,
         inactive_count,
@@ -81,5 +100,5 @@ pub async fn get_catalog_summary(
         max_price,
         total_stock,
         products: list.products,
-    }))
+    })
 }

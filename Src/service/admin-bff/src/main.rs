@@ -15,7 +15,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use ddd_bff::clients::GrpcClientPool;
+use ddd_infrastructure::cache::RedisCache;
 use ddd_shared_kernel::jwt::{JwtValidator, StandardClaims};
+use ddd_shared_kernel::Cache;
 use tracing_subscriber::{
     layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer,
 };
@@ -97,8 +99,30 @@ async fn main() {
         tracing::warn!("JWT_SECRET not set — admin endpoints are UNPROTECTED");
     }
 
-    // ── Unified AppState ──────────────────────────────────────────────────
-    let state = admin_bff::application::state::AppState::new(config.clone(), pool, jwt_validator);
+    // ── Cache (optional — enabled when REDIS_URL is set) ─────────────────
+    let cache: Option<Arc<dyn Cache>> = if config.cache.redis_url.is_empty() {
+        tracing::warn!("REDIS_URL not set — read-through cache disabled");
+        None
+    } else {
+        match RedisCache::connect(&config.cache.redis_url, config.cache.key_prefix.clone()).await
+        {
+            Ok(c) => {
+                tracing::info!(
+                    url = %config.cache.redis_url,
+                    prefix = %config.cache.key_prefix,
+                    "Redis cache enabled"
+                );
+                Some(Arc::new(c) as Arc<dyn Cache>)
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "failed to connect to Redis — cache disabled");
+                None
+            }
+        }
+    };
+
+    // ── Unified AppState ──────────────────────────────────────────
+    let state = admin_bff::application::state::AppState::new(config.clone(), pool, jwt_validator, cache);
 
     // ── Build Router ─────────────────────────────────────────────────────
     let app = admin_bff::api::router::build_router(state).await;

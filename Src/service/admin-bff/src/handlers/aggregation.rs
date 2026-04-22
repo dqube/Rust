@@ -5,7 +5,7 @@
 //! This is the kind of cross-cutting query a BFF exists for — the downstream
 //! service exposes simple CRUD, the BFF composes higher-level views.
 
-use std::sync::Arc;
+
 
 use axum::extract::State;
 use axum::Json;
@@ -13,10 +13,8 @@ use serde::Serialize;
 
 use ddd_bff::prelude::*;
 
-use super::products::ProductClient;
+use crate::state::AppState;
 use crate::proto;
-
-pub type AggregationState = Arc<ProductClient>;
 
 /// Aggregated catalog summary.
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -53,10 +51,10 @@ pub struct CatalogSummary {
     tag = "Aggregation"
 )]
 pub async fn get_catalog_summary(
-    State(state): State<AggregationState>,
+    State(state): State<AppState>,
 ) -> Result<Json<CatalogSummary>, ProblemDetail> {
     // Fetch a large page to get the full catalog for aggregation.
-    let mut client = state.client();
+    let mut client = state.product_client.client();
     let resp = client
         .list_products(proto::ListProductsRequest {
             page: 1,

@@ -4,7 +4,7 @@
 //! `OrderServiceClient`. Proto types carry serde + utoipa derives (from
 //! `build.rs`) so they serve as both JSON DTOs and OpenAPI schemas.
 
-use std::sync::Arc;
+
 
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
@@ -13,34 +13,13 @@ use axum::Json;
 use serde::Deserialize;
 
 use ddd_bff::prelude::*;
-use crate::proto_order::order_service_client::OrderServiceClient;
+
 use crate::proto_order::{
     CancelOrderRequest, ConfirmOrderRequest, CreateOrderRequest, GetOrderRequest,
     ListOrdersRequest,
 };
 
-/// Shared state for order handlers.
-pub type OrderState = Arc<OrderClient>;
-
-/// Wraps a tonic channel for constructing order-service gRPC clients.
-#[derive(Clone)]
-pub struct OrderClient {
-    channel: tonic::transport::Channel,
-}
-
-impl OrderClient {
-    pub fn new(channel: tonic::transport::Channel) -> Self {
-        Self { channel }
-    }
-
-    pub fn client(
-        &self,
-    ) -> OrderServiceClient<
-        tonic::service::interceptor::InterceptedService<tonic::transport::Channel, TracingInterceptor>,
-    > {
-        OrderServiceClient::with_interceptor(self.channel.clone(), TracingInterceptor)
-    }
-}
+use crate::state::AppState;
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -56,7 +35,7 @@ fn actor_from_ext(claims: &Option<ddd_shared_kernel::jwt::StandardClaims>) -> &s
 
 /// Place a new order.
 pub async fn create_order(
-    State(state): State<OrderState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -64,7 +43,7 @@ pub async fn create_order(
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx.clone(), async {
-            state.client().create_order(req).await
+            state.order_client.client().create_order(req).await
         })
         .await
         .into_problem()?;
@@ -86,13 +65,13 @@ pub async fn create_order(
 
 /// Fetch an order by ID.
 pub async fn get_order(
-    State(state): State<OrderState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
-            state.client().get_order(GetOrderRequest { id }).await
+            state.order_client.client().get_order(GetOrderRequest { id }).await
         })
         .await
         .into_problem()?;
@@ -101,13 +80,14 @@ pub async fn get_order(
 
 /// List orders with pagination.
 pub async fn list_orders(
-    State(state): State<OrderState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Query(params): Query<ListQuery>,
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
             state
+                .order_client
                 .client()
                 .list_orders(ListOrdersRequest {
                     page: params.page.unwrap_or(0),
@@ -122,7 +102,7 @@ pub async fn list_orders(
 
 /// Confirm a pending order.
 pub async fn confirm_order(
-    State(state): State<OrderState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -131,6 +111,7 @@ pub async fn confirm_order(
     TRACE_CTX
         .scope(trace_ctx.clone(), async {
             state
+                .order_client
                 .client()
                 .confirm_order(ConfirmOrderRequest { id: id.clone() })
                 .await
@@ -153,7 +134,7 @@ pub async fn confirm_order(
 
 /// Cancel an order with a reason.
 pub async fn cancel_order(
-    State(state): State<OrderState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -163,6 +144,7 @@ pub async fn cancel_order(
     TRACE_CTX
         .scope(trace_ctx.clone(), async {
             state
+                .order_client
                 .client()
                 .cancel_order(CancelOrderRequest {
                     id: id.clone(),

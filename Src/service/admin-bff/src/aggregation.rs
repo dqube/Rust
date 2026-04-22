@@ -10,27 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use ddd_bff::prelude::*;
 
-use crate::proto_order::order_service_client::OrderServiceClient;
 use crate::proto_order::GetOrderRequest;
 
-#[derive(Clone)]
-pub struct AggregationState {
-    pub channel: tonic::transport::Channel,
-}
-
-impl AggregationState {
-    pub fn new(channel: tonic::transport::Channel) -> Self {
-        Self { channel }
-    }
-
-    fn order_client(
-        &self,
-    ) -> OrderServiceClient<
-        tonic::service::interceptor::InterceptedService<tonic::transport::Channel, TracingInterceptor>,
-    > {
-        OrderServiceClient::with_interceptor(self.channel.clone(), TracingInterceptor)
-    }
-}
+use crate::state::AppState;
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct BatchRequest {
@@ -65,7 +47,7 @@ pub enum BatchResult {
 /// Body: `{ "ids": ["<uuid>", "<uuid>", ...] }`
 /// Returns 200 with per-id success/failure; never fails the whole batch.
 pub async fn batch_get_orders(
-    State(state): State<AggregationState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Json(req): Json<BatchRequest>,
 ) -> impl IntoResponse {
@@ -103,9 +85,10 @@ pub async fn batch_get_orders(
     .into_response()
 }
 
-async fn fetch_one(state: &AggregationState, id: String) -> BatchResult {
+async fn fetch_one(state: &AppState, id: String) -> BatchResult {
     let result = state
-        .order_client()
+        .order_client
+        .client()
         .get_order(GetOrderRequest { id: id.clone() })
         .await;
 

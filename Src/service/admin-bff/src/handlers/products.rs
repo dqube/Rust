@@ -8,7 +8,7 @@
 //! gRPC calls via the task-local [`TRACE_CTX`]. Mutating operations emit
 //! structured audit events.
 
-use std::sync::Arc;
+
 
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
@@ -17,7 +17,7 @@ use axum::Json;
 use serde::Deserialize;
 
 use ddd_bff::prelude::*;
-use crate::proto::product_service_client::ProductServiceClient;
+
 use crate::proto::{
     ConfirmImageUploadRequest, CreateProductRequest, CreateProductResponse,
     DeactivateProductRequest, GetProductRequest, GetProductResponse,
@@ -28,28 +28,7 @@ use crate::proto::{
 // re-export for OpenAPI schema reference in main.rs
 pub use crate::proto;
 
-/// Shared state for product handlers.
-pub type ProductState = Arc<ProductClient>;
-
-/// Wraps a tonic channel for constructing product-service gRPC clients.
-#[derive(Clone)]
-pub struct ProductClient {
-    channel: tonic::transport::Channel,
-}
-
-impl ProductClient {
-    pub fn new(channel: tonic::transport::Channel) -> Self {
-        Self { channel }
-    }
-
-    pub fn client(
-        &self,
-    ) -> ProductServiceClient<
-        tonic::service::interceptor::InterceptedService<tonic::transport::Channel, TracingInterceptor>,
-    > {
-        ProductServiceClient::with_interceptor(self.channel.clone(), TracingInterceptor)
-    }
-}
+use crate::state::AppState;
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -75,7 +54,7 @@ fn actor_from_ext(claims: &Option<ddd_shared_kernel::jwt::StandardClaims>) -> &s
     tag = "Products"
 )]
 pub async fn create_product(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -83,7 +62,7 @@ pub async fn create_product(
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx.clone(), async {
-            state.client().create_product(req).await
+            state.product_client.client().create_product(req).await
         })
         .await
         .into_problem()?;
@@ -114,13 +93,13 @@ pub async fn create_product(
     tag = "Products"
 )]
 pub async fn get_product(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
-            state.client().get_product(GetProductRequest { id }).await
+            state.product_client.client().get_product(GetProductRequest { id }).await
         })
         .await
         .into_problem()?;
@@ -141,13 +120,14 @@ pub async fn get_product(
     tag = "Products"
 )]
 pub async fn list_products(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Query(params): Query<ListQuery>,
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
             state
+                .product_client
                 .client()
                 .list_products(ListProductsRequest {
                     page: params.page.unwrap_or(0),
@@ -174,7 +154,7 @@ pub async fn list_products(
     tag = "Products"
 )]
 pub async fn update_stock(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -184,6 +164,7 @@ pub async fn update_stock(
     TRACE_CTX
         .scope(trace_ctx.clone(), async {
             state
+                .product_client
                 .client()
                 .update_stock(UpdateStockRequest {
                     id: id.clone(),
@@ -220,7 +201,7 @@ pub async fn update_stock(
     tag = "Products"
 )]
 pub async fn deactivate_product(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -229,6 +210,7 @@ pub async fn deactivate_product(
     TRACE_CTX
         .scope(trace_ctx.clone(), async {
             state
+                .product_client
                 .client()
                 .deactivate_product(DeactivateProductRequest { id: id.clone() })
                 .await
@@ -296,7 +278,7 @@ pub struct ConfirmImageBody {
     tag = "Products"
 )]
 pub async fn request_image_upload_url(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Path(id): Path<String>,
     Json(body): Json<ImageUploadUrlBody>,
@@ -304,6 +286,7 @@ pub async fn request_image_upload_url(
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
             state
+                .product_client
                 .client()
                 .request_image_upload_url(RequestImageUploadUrlRequest {
                     product_id: id,
@@ -334,7 +317,7 @@ pub async fn request_image_upload_url(
     tag = "Products"
 )]
 pub async fn confirm_image_upload(
-    State(state): State<ProductState>,
+    State(state): State<AppState>,
     Extension(trace_ctx): Extension<RequestTraceContext>,
     Extension(ClientIp(client_ip)): Extension<ClientIp>,
     claims: Option<Extension<ddd_shared_kernel::jwt::StandardClaims>>,
@@ -344,6 +327,7 @@ pub async fn confirm_image_upload(
     TRACE_CTX
         .scope(trace_ctx.clone(), async {
             state
+                .product_client
                 .client()
                 .confirm_image_upload(ConfirmImageUploadRequest {
                     product_id: id.clone(),

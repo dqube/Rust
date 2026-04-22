@@ -45,7 +45,7 @@ Production-ready Domain-Driven Design building blocks for Rust microservices, im
 
 | Crate | Type | Depends on | Purpose |
 |-------|------|------------|---------|
-| [`ddd-shared-kernel`](Src/crates/ddd-sharedkernel/) | lib | — | Foundation types: `AppError`, `TypedId`, `Page`, outbox/inbox, DLQ, idempotency, saga, domain/integration events, validation |
+| [`ddd-shared-kernel`](Src/crates/ddd-shared-kernel/) | lib | — | Foundation types: `AppError`, `TypedId`, `Page`, outbox/inbox, DLQ, idempotency, saga, domain/integration events, validation |
 | [`ddd-domain`](Src/crates/ddd-domain/) | lib | shared-kernel | Pure domain: aggregates, entities, value objects, repository ports, specifications, policies, domain services |
 | [`ddd-application`](Src/crates/ddd-application/) | lib | shared-kernel | CQRS dispatch, `Mediator`, `UnitOfWork`, validation, `IdempotentCommandHandler`, saga orchestrator |
 | [`ddd-infrastructure`](Src/crates/ddd-infrastructure/) | lib | shared-kernel, application | SeaORM repositories, NATS messaging, OpenTelemetry + Prometheus telemetry |
@@ -60,7 +60,7 @@ Production-ready Domain-Driven Design building blocks for Rust microservices, im
 | [`order-service`](Src/service/order-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Order management with gRPC and REST APIs |
 | [`product-service`](Src/service/product-service/) | bin | ddd-api, ddd-application, ddd-infrastructure | Product management with gRPC and REST APIs, presigned image upload |
 
-Each crate is independently buildable — there is **no root workspace**. Path dependencies are relative (`../ddd-sharedkernel`).
+Each crate is independently buildable — there is **no root workspace**. Path dependencies are relative (`../ddd-shared-kernel`).
 
 ## Key Features
 
@@ -82,7 +82,7 @@ register_event_handler!(OrderPlaced, AppDeps, |deps| {
 });
 
 let mediator = Mediator::from_inventory(&app_deps);
-let order_id = mediator.send(CreateOrder { sku: "WIDGET-42".into(), qty: 5 }).await?;
+let order_id = mediator.send(CreateOrder { sku: "WIDGET-42".into() }).await?;
 ```
 
 ### Outbox / Inbox Pattern
@@ -91,7 +91,7 @@ Integration events go through the **transactional outbox**, never directly publi
 
 ```rust
 // Inside a command handler — same UnitOfWork transaction
-uow.begin().await?;
+let mut uow = factory.begin().await?;
 order_repo.save(&order, &uow).await?;
 outbox_repo.store(OutboxMessage::new("order.placed", &event)?).await?;
 uow.commit().await?;
@@ -101,11 +101,11 @@ uow.commit().await?;
 ### Idempotency
 
 ```rust
-// Decorator wraps any CommandHandler with idempotency checks:
-let handler = IdempotentCommandHandler::new(inner_handler, idempotency_store);
+// Decorator wraps any CommandHandler with idempotency protection:
+let handler = IdempotentCommandHandler::new(inner_handler, idempotency_store, ttl);
 
 // REST: extract from Idempotency-Key header (ddd-api)
-async fn create_order(key: IdempotencyKey, ...) -> Result<...> { ... }
+async fn create_order(IdempotencyKey(key): IdempotencyKey, ...) -> Result<...> { ... }
 
 // gRPC: extract from metadata (ddd-api)
 let key = extract_idempotency_key(request.metadata())?;
@@ -116,23 +116,23 @@ let key = extract_idempotency_key(request.metadata())?;
 Long-running multi-step workflows with automatic compensation:
 
 ```rust
-let saga_def = SagaDefinition::new("create-order", vec![
-    SagaStepDefinition {
-        name: "reserve-inventory".into(),
-        action_event_type: "inventory.reserve".into(),
-        compensation_event_type: "inventory.release".into(),
-        ..
-    },
-    SagaStepDefinition {
-        name: "charge-payment".into(),
-        action_event_type: "payment.charge".into(),
-        compensation_event_type: "payment.refund".into(),
-        ..
-    },
-]);
+let saga_def = SagaDefinition {
+    saga_type: "create-order".into(),
+    steps: vec![
+        SagaStepDefinition {
+            name: "reserve-inventory".into(),
+            action_event_type: "inventory.reserve".into(),
+            compensation_event_type: "inventory.release".into(),
+            ..
+        },
+    ],
+};
 
-let orchestrator = DefaultSagaOrchestrator::new(saga_repo, outbox_repo);
-orchestrator.start("create-order", correlation_id, payload).await?;
+let mut registry = SagaDefinitionRegistry::new();
+registry.register(saga_def);
+
+let orchestrator = DefaultSagaOrchestrator::new(saga_repo, outbox_repo, Arc::new(registry));
+orchestrator.start("create-order", serde_json::to_value(payload)?).await?;
 ```
 
 ### Validation
@@ -175,10 +175,10 @@ axum::serve(listener, app)
     .with_graceful_shutdown(ddd_bff::edge::shutdown::wait_for_shutdown_signal())
     .await?;
 
-// axum via ddd-api
-RestServer::new(app)
-    .with_graceful_shutdown(shutdown_signal())
-    .serve("0.0.0.0:8080")
+// REST Server via ddd-api
+RestServer::new()
+    .with_router(app)
+    .run()
     .await?;
 ```
 
@@ -212,7 +212,7 @@ Key ddd-bff building blocks:
 ```
 Src/
 ├── crates/
-│   ├── ddd-sharedkernel/      # Foundation: AppError, TypedId, outbox/inbox, DLQ, saga, validation
+│   ├── ddd-shared-kernel/     # Foundation: AppError, TypedId, outbox/inbox, DLQ, saga, validation
 │   ├── ddd-domain/            # Pure domain: aggregates, specs, policies, repository ports
 │   ├── ddd-application/       # CQRS, Mediator, UnitOfWork, idempotency, saga orchestrator
 │   ├── ddd-infrastructure/    # SeaORM repos, NATS messaging, OpenTelemetry telemetry
@@ -233,7 +233,7 @@ Src/
 cargo check --manifest-path Src/crates/ddd-api/Cargo.toml --all-features
 
 # Build all crates
-for dir in ddd-sharedkernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
+for dir in ddd-shared-kernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
   cargo check --manifest-path Src/crates/$dir/Cargo.toml --all-features
 done
 
@@ -243,12 +243,12 @@ cargo build --manifest-path Src/service/product-service/Cargo.toml
 cargo build --manifest-path Src/service/admin-bff/Cargo.toml
 
 # Run all tests
-for dir in ddd-sharedkernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
+for dir in ddd-shared-kernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
   cargo test --manifest-path Src/crates/$dir/Cargo.toml
 done
 
 # Clippy (strict)
-for dir in ddd-sharedkernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
+for dir in ddd-shared-kernel ddd-domain ddd-application ddd-infrastructure ddd-api ddd-bff; do
   cargo clippy --manifest-path Src/crates/$dir/Cargo.toml --all-targets --all-features -- -D warnings
 done
 ```
@@ -259,7 +259,7 @@ done
 
 | Crate | Features | Default |
 |-------|----------|---------|
-| `ddd-shared-kernel` | `validation`, `grpc` | — |
+| `ddd-shared-kernel` | `validation`, `grpc`, `jwt` | — |
 | `ddd-domain` | `tracing` | — |
 | `ddd-application` | `tracing`, `validation` | — |
 | `ddd-infrastructure` | `postgres`, `nats`, `telemetry`, `full` | `postgres`, `nats`, `telemetry` |
@@ -285,10 +285,7 @@ done
 | Document | Contents |
 |----------|----------|
 | [`CLAUDE.md`](CLAUDE.md) | AI assistant guidance — commands, patterns, design decisions |
-| [`ddd-api.md`](ddd-api.md) | Full specification for the `ddd-api` crate |
-| [`ddd-bff.md`](ddd-bff.md) | Full specification for the `ddd-bff` crate |
-| [`implementationplan.md`](implementationplan.md) | Architectural overview — Clean Architecture + CQRS + BFF |
-| [`mediator.md`](mediator.md) | Mediator migration plan and self-registration rationale |
+| [`GRAPH_REPORT.md`](graphify-out/GRAPH_REPORT.md) | Architectural knowledge graph summary |
 
 ## License
 

@@ -8,22 +8,24 @@ Zero-dependency base types and utilities shared by every layer of the DDD stack.
 |---|---|
 | `error` | `AppError`, `AppResult`, `ValidationFieldError` |
 | `id` | `TypedId<T>`, `declare_id!` macro |
-| `aggregate` | `AggregateRoot` trait, `impl_aggregate_root!`, `record_event!` |
-| `entity` / `value_object` | Marker traits + `impl_value_object!` |
-| `domain_event` | `DomainEvent`, `DomainEventEnvelope`, `DomainEventDispatcher` |
-| `integration_event` | `IntegrationEvent`, `IntegrationEventEnvelope`, `IntegrationEventPublisher` |
+| `aggregate` | `AggregateRoot` trait, `impl_aggregate_events!`, `record_event!` |
+| `entity` / `value_object` | Marker traits |
+| `domain_event` | `DomainEvent`, `DomainEventEnvelope` |
+| `integration_event` | `IntegrationEvent`, `IntegrationEventEnvelope` |
 | `outbox` | `OutboxMessage`, `OutboxRepository`, `OutboxRelay` (ports) |
 | `inbox` | `InboxMessage`, `InboxRepository`, `InboxMessageHandler`, `InboxProcessor` (ports) |
-| `dead_letter` | `DeadLetterMessage`, `DeadLetterOrigin`, `DeadLetterRepository`, `DeadLetterAlert`, `LogDeadLetterAlert` |
+| `dead_letter` | `DeadLetterMessage`, `DeadLetterRepository`, `DeadLetterAlert` |
 | `idempotency` | `IdempotencyRecord`, `IdempotencyStore` (port) |
-| `saga` | `SagaDefinition`, `SagaInstance`, `SagaOrchestrator`, `SagaInstanceRepository` (ports + types) |
+| `saga` | `SagaDefinition`, `SagaInstance`, `SagaStatus` |
 | `pagination` | `Page<T>`, `PageRequest` |
 | `validation` | Fluent validation API, `validate!`, `validate_all!` |
+| `jwt` | `JwtValidator`, `StandardClaims` (feature `jwt`) |
 
-## Features
+## Standalone Examples
 
-- `validation` — enables `validator` + `regex` dependencies for fluent rules.
-- `grpc` — enables a `tonic::Status` conversion for `AppError`.
+For full implementation details, see:
+- [`jwt_usage.rs`](examples/jwt_usage.rs) — HS256 validation, custom claims, and leeway configuration.
+- [`saga_definition.rs`](examples/saga_definition.rs) — Constructing complex multi-step saga workflows.
 
 ## Examples
 
@@ -54,23 +56,33 @@ fn find_order(id: &str) -> AppResult<Order> {
 // Validation errors with field-level detail
 fn validate_input(email: &str) -> AppResult<()> {
     if email.is_empty() {
-        return Err(AppError::validation_field("email", "must not be empty"));
+        return Err(AppError::validation("email", "must not be empty"));
     }
     Ok(())
 }
 ```
 
-### Domain events
+### Aggregate macros
 
 ```rust
-use ddd_shared_kernel::{DomainEvent, AggregateRoot, record_event, impl_aggregate_root};
+use ddd_shared_kernel::{AggregateRoot, impl_aggregate_events, record_event};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct OrderPlaced { order_id: Uuid, total: f64 }
-
-impl DomainEvent for OrderPlaced {
-    fn event_type(&self) -> &str { "OrderPlaced" }
+#[derive(Debug, Default)]
+struct Order {
+    id: OrderId,
+    domain_events: Vec<Box<dyn DomainEvent>>,
+    // ...
 }
+
+impl AggregateRoot for Order {
+    type Id = OrderId;
+    fn id(&self) -> &Self::Id { &self.id }
+}
+
+impl_aggregate_events!(Order);
+
+// Inside a domain method:
+record_event!(self, OrderPlaced { order_id: self.id });
 ```
 
 ### Integration events + outbox
@@ -83,7 +95,6 @@ struct OrderPlacedIntegration { order_id: Uuid }
 
 impl IntegrationEvent for OrderPlacedIntegration {
     fn event_type(&self) -> &str { "order.placed" }
-    fn subject(&self) -> &str { "orders" }
 }
 
 // Inside a command handler (same transaction as aggregate save):
@@ -91,57 +102,22 @@ let msg = OutboxMessage::new("order.placed", &OrderPlacedIntegration { order_id 
 outbox_repo.store(msg).await?;
 ```
 
-### Dead-letter queue
+### Saga definitions
 
 ```rust
-use ddd_shared_kernel::dead_letter::{DeadLetterAlert, LogDeadLetterAlert};
+use ddd_shared_kernel::saga::{SagaDefinition, SagaStepDefinition};
 
-// OutboxRelay and InboxProcessor automatically move failed messages
-// to the dead-letter store after max_attempts:
-let relay = OutboxRelay::new(
-    outbox_repo,
-    publisher,
-    dead_letter_repo,
-    Arc::new(LogDeadLetterAlert),  // logs alerts; implement DeadLetterAlert for custom behaviour
-    5,                              // max_attempts
-);
-```
-
-### Idempotency store
-
-```rust
-use ddd_shared_kernel::idempotency::{IdempotencyStore, IdempotencyRecord};
-
-// Port — implementations live in ddd-infrastructure
-#[async_trait]
-pub trait IdempotencyStore: Send + Sync {
-    async fn get(&self, key: &str) -> AppResult<Option<IdempotencyRecord>>;
-    async fn store(&self, record: IdempotencyRecord) -> AppResult<()>;
-    async fn delete(&self, key: &str) -> AppResult<()>;
-}
-```
-
-### Saga types
-
-```rust
-use ddd_shared_kernel::saga::{SagaDefinition, SagaStepDefinition, SagaInstance, SagaStatus};
-
-let definition = SagaDefinition::new("order-saga", vec![
-    SagaStepDefinition {
-        name: "reserve-inventory".into(),
-        action_event_type: "inventory.reserve".into(),
-        action_subject: "inventory".into(),
-        compensation_event_type: "inventory.release".into(),
-        compensation_subject: "inventory".into(),
-    },
-    SagaStepDefinition {
-        name: "charge-payment".into(),
-        action_event_type: "payment.charge".into(),
-        action_subject: "payments".into(),
-        compensation_event_type: "payment.refund".into(),
-        compensation_subject: "payments".into(),
-    },
-]);
+let definition = SagaDefinition {
+    saga_type: "order-saga".into(),
+    steps: vec![
+        SagaStepDefinition {
+            name: "reserve-inventory".into(),
+            action_event_type: "inventory.reserve".into(),
+            compensation_event_type: "inventory.release".into(),
+            ..
+        },
+    ],
+};
 ```
 
 ### Fluent validation
@@ -152,29 +128,14 @@ use ddd_shared_kernel::validation::ValidationResult;
 
 let result: ValidationResult = validate_all!(
     validate!(email, "email").not_empty().email().into(),
-    validate!(&age, "age").positive().in_range(18, 120).into(),
-    validate!(name, "name").not_empty().min_length(2).max_length(100).into()
+    validate!(&age, "age").positive().in_range(18, 120).into()
 );
-// result is Err(AppError::ValidationBatch(...)) if any field fails
-```
-
-### Pagination
-
-```rust
-use ddd_shared_kernel::{Page, PageRequest};
-
-let request = PageRequest::new(0, 20);  // page 0, size 20
-let page: Page<OrderDto> = Page {
-    content: vec![/* items */],
-    total_elements: 100,
-    total_pages: 5,
-    page: 0,
-    size: 20,
-};
+// Returns Err(AppError::ValidationBatch(...)) if any field fails
+result.into_app_error()?;
 ```
 
 ## Rules
 
+- **Zero dependencies** on other crates in this repository.
 - No framework types (no SeaORM, tonic, axum, async-nats).
 - Ports (traits) for outbox/inbox/dead-letter/idempotency/saga live here; implementations live in `ddd-infrastructure`.
-- Every outer crate imports from here; keep additions backward-compatible.

@@ -1,10 +1,9 @@
+use ddd_domain::define_entity;
 use uuid::Uuid;
 
 use crate::domain::ids::{ProductId, ProductVariantId};
 
-#[derive(Debug, Clone)]
-pub struct ProductVariant {
-    pub id:                  ProductVariantId,
+define_entity!(ProductVariant, ProductVariantId, {
     pub product_id:          ProductId,
     pub sku:                 String,
     pub description:         Option<String>,
@@ -19,7 +18,7 @@ pub struct ProductVariant {
     pub height_cm:           Option<i32>,
     pub depth_cm:            Option<i32>,
     pub attributes:          serde_json::Value,
-}
+});
 
 impl ProductVariant {
     #[allow(clippy::too_many_arguments)]
@@ -46,8 +45,8 @@ impl ProductVariant {
             description,
             price_override,
             cost_price_override,
-            is_active: true,
-            is_default: false,
+            is_active:    true,
+            is_default:   false,
             barcode,
             barcode_type,
             weight_grams,

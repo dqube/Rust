@@ -1,13 +1,12 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use ddd_domain::{define_aggregate, impl_aggregate, impl_aggregate_events};
 use ddd_shared_kernel::AppError;
 
 use crate::domain::ids::TaxConfigId;
 
-#[derive(Debug, Clone)]
-pub struct TaxConfiguration {
-    pub id:             TaxConfigId,
+define_aggregate!(TaxConfiguration, TaxConfigId, {
     pub name:           String,
     pub code:           String,
     pub tax_type:       String,
@@ -17,11 +16,12 @@ pub struct TaxConfiguration {
     pub is_active:      bool,
     pub effective_date: DateTime<Utc>,
     pub expiry_date:    Option<DateTime<Utc>>,
-    pub created_at:     DateTime<Utc>,
     pub created_by:     Option<String>,
-    pub updated_at:     Option<DateTime<Utc>>,
     pub updated_by:     Option<String>,
-}
+});
+
+impl_aggregate!(TaxConfiguration, TaxConfigId);
+impl_aggregate_events!(TaxConfiguration);
 
 impl TaxConfiguration {
     #[allow(clippy::too_many_arguments)]
@@ -41,21 +41,24 @@ impl TaxConfiguration {
         if code.trim().is_empty() {
             return Err(AppError::validation("tax_code", "Tax code cannot be empty"));
         }
+        let now = Utc::now();
         Ok(Self {
-            id: TaxConfigId::from_uuid(Uuid::new_v4()),
+            id:             TaxConfigId::from_uuid(Uuid::new_v4()),
+            version:        0,
+            domain_events:  Vec::new(),
+            created_at:     now,
+            updated_at:     now,
             name,
             code,
             tax_type,
             location_id,
             category_id,
             tax_rate,
-            is_active: true,
+            is_active:      true,
             effective_date,
             expiry_date,
-            created_at: Utc::now(),
-            created_by: None,
-            updated_at: None,
-            updated_by: None,
+            created_by:     None,
+            updated_by:     None,
         })
     }
 
@@ -80,7 +83,7 @@ impl TaxConfiguration {
         self.tax_rate = tax_rate;
         self.effective_date = effective_date;
         self.expiry_date = expiry_date;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -89,7 +92,7 @@ impl TaxConfiguration {
             return Err(AppError::conflict("Tax configuration is already active"));
         }
         self.is_active = true;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -98,7 +101,7 @@ impl TaxConfiguration {
             return Err(AppError::conflict("Tax configuration is already inactive"));
         }
         self.is_active = false;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 }

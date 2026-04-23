@@ -48,6 +48,10 @@ fn db_err(e: sea_orm::DbErr) -> AppError {
 fn model_to_customer(m: customer::Model) -> Customer {
     Customer {
         id: CustomerId::from_uuid(m.id),
+        version: 0,
+        created_at: to_utc(m.created_at),
+        updated_at: opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events: Vec::new(),
         user_id: m.user_id,
         first_name: m.first_name,
         last_name: m.last_name,
@@ -59,13 +63,10 @@ fn model_to_customer(m: customer::Model) -> Customer {
         loyalty_points: m.loyalty_points,
         preferred_contact_method: m.preferred_contact_method,
         preferred_address_type: m.preferred_address_type,
-        created_at: to_utc(m.created_at),
         created_by: m.created_by,
-        updated_at: opt_to_utc(m.updated_at),
         updated_by: m.updated_by,
         contact_numbers: Vec::new(),
         addresses: Vec::new(),
-        domain_events: Vec::new(),
     }
 }
 
@@ -106,6 +107,10 @@ fn model_to_profile(m: profile::Model) -> AppResult<CustomerProfile> {
         .map_err(|e| AppError::internal(format!("kyc_documents decode: {e}")))?;
     Ok(CustomerProfile {
         id: CustomerProfileId::from_uuid(m.id),
+        version: 0,
+        created_at: to_utc(m.created_at),
+        updated_at: opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events: Vec::new(),
         customer_id: CustomerId::from_uuid(m.customer_id),
         date_of_birth: opt_to_utc(m.date_of_birth),
         gender: m.gender.map(Gender::from_i16),
@@ -121,11 +126,8 @@ fn model_to_profile(m: profile::Model) -> AppResult<CustomerProfile> {
         kyc_verified_at: opt_to_utc(m.kyc_verified_at),
         kyc_documents,
         avatar_object_name: m.avatar_object_name,
-        created_at: to_utc(m.created_at),
         created_by: m.created_by,
-        updated_at: opt_to_utc(m.updated_at),
         updated_by: m.updated_by,
-        domain_events: Vec::new(),
     })
 }
 

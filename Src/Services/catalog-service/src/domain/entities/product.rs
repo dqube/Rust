@@ -1,6 +1,7 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use uuid::Uuid;
 
+use ddd_domain::{define_aggregate, impl_aggregate, impl_aggregate_events};
 use ddd_shared_kernel::AppError;
 
 use crate::domain::ids::{ProductId, ProductImageId, ProductVariantId};
@@ -9,43 +10,41 @@ use super::country_pricing::CountryPricing;
 use super::product_image::ProductImage;
 use super::product_variant::ProductVariant;
 
-#[derive(Debug, Clone)]
-pub struct Product {
-    pub id:                           ProductId,
-    pub sku:                          String,
-    pub name:                         String,
-    pub description:                  Option<String>,
-    pub slug:                         Option<String>,
-    pub category_id:                  i32,
-    pub weight_grams:                 Option<i32>,
-    pub width_cm:                     Option<i32>,
-    pub height_cm:                    Option<i32>,
-    pub depth_cm:                     Option<i32>,
-    pub brand_id:                     Option<Uuid>,
-    pub base_price:                   f64,
-    pub cost_price:                   f64,
-    pub is_taxable:                   bool,
-    pub is_discontinued:              bool,
-    pub discontinued_at:              Option<DateTime<Utc>>,
-    pub is_inventory_tracked:         bool,
-    pub specifications:               serde_json::Value,
-    pub tags:                         Vec<String>,
-    pub assigned_tax_config_ids:      Vec<String>,
-    pub average_rating:               Option<f64>,
-    pub total_reviews:                i32,
-    pub active_promotion_id:          Option<Uuid>,
-    pub active_promotion_name:        Option<String>,
+define_aggregate!(Product, ProductId, {
+    pub sku:                           String,
+    pub name:                          String,
+    pub description:                   Option<String>,
+    pub slug:                          Option<String>,
+    pub category_id:                   i32,
+    pub weight_grams:                  Option<i32>,
+    pub width_cm:                      Option<i32>,
+    pub height_cm:                     Option<i32>,
+    pub depth_cm:                      Option<i32>,
+    pub brand_id:                      Option<Uuid>,
+    pub base_price:                    f64,
+    pub cost_price:                    f64,
+    pub is_taxable:                    bool,
+    pub is_discontinued:               bool,
+    pub discontinued_at:               Option<chrono::DateTime<chrono::Utc>>,
+    pub is_inventory_tracked:          bool,
+    pub specifications:                serde_json::Value,
+    pub tags:                          Vec<String>,
+    pub assigned_tax_config_ids:       Vec<String>,
+    pub average_rating:                Option<f64>,
+    pub total_reviews:                 i32,
+    pub active_promotion_id:           Option<Uuid>,
+    pub active_promotion_name:         Option<String>,
     pub promotion_discount_percentage: Option<f64>,
-    pub promotion_valid_until:        Option<DateTime<Utc>>,
-    pub created_at:                   DateTime<Utc>,
-    pub created_by:                   Option<String>,
-    pub updated_at:                   Option<DateTime<Utc>>,
-    pub updated_by:                   Option<String>,
-    // Children (loaded eagerly)
-    pub variants:        Vec<ProductVariant>,
-    pub images:          Vec<ProductImage>,
-    pub country_pricing: Vec<CountryPricing>,
-}
+    pub promotion_valid_until:         Option<chrono::DateTime<chrono::Utc>>,
+    pub created_by:                    Option<String>,
+    pub updated_by:                    Option<String>,
+    pub variants:                      Vec<ProductVariant>,
+    pub images:                        Vec<ProductImage>,
+    pub country_pricing:               Vec<CountryPricing>,
+});
+
+impl_aggregate!(Product, ProductId);
+impl_aggregate_events!(Product);
 
 impl Product {
     pub fn create(
@@ -66,9 +65,14 @@ impl Product {
         if base_price < 0.0 {
             return Err(AppError::validation("base_price", "Base price cannot be negative"));
         }
+        let now  = Utc::now();
         let slug = slugify(&name);
         Ok(Self {
             id: ProductId::from_uuid(Uuid::new_v4()),
+            version: 0,
+            domain_events: Vec::new(),
+            created_at: now,
+            updated_at: now,
             sku,
             name,
             description,
@@ -94,9 +98,7 @@ impl Product {
             active_promotion_name: None,
             promotion_discount_percentage: None,
             promotion_valid_until: None,
-            created_at: Utc::now(),
             created_by: None,
-            updated_at: None,
             updated_by: None,
             variants: Vec::new(),
             images: Vec::new(),
@@ -122,13 +124,13 @@ impl Product {
         self.cost_price = cost_price;
         self.is_taxable = is_taxable;
         self.description = description;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
     pub fn update_pricing(&mut self, price: f64) {
         self.base_price = price;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn discontinue(&mut self) -> Result<(), AppError> {
@@ -137,7 +139,7 @@ impl Product {
         }
         self.is_discontinued = true;
         self.discontinued_at = Some(Utc::now());
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -147,13 +149,13 @@ impl Product {
         }
         self.is_discontinued = false;
         self.discontinued_at = None;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
     pub fn assign_brand(&mut self, brand_id: Option<Uuid>) {
         self.brand_id = brand_id;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn set_dimensions(
@@ -167,22 +169,22 @@ impl Product {
         self.width_cm = width_cm;
         self.height_cm = height_cm;
         self.depth_cm = depth_cm;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn set_specifications(&mut self, specs: serde_json::Value) {
         self.specifications = specs;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn set_tags(&mut self, tags: Vec<String>) {
         self.tags = tags;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn set_tax_configurations(&mut self, ids: Vec<String>) {
         self.assigned_tax_config_ids = ids;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn add_image(&mut self, image: ProductImage) {
@@ -192,20 +194,20 @@ impl Product {
             }
         }
         self.images.push(image);
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn remove_image(&mut self, image_id: ProductImageId) -> Result<(), AppError> {
         let pos = self.images.iter().position(|i| i.id == image_id)
             .ok_or_else(|| AppError::not_found("image", image_id.to_string()))?;
         self.images.remove(pos);
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
     pub fn add_variant(&mut self, variant: ProductVariant) {
         self.variants.push(variant);
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -241,7 +243,7 @@ impl Product {
         v.width_cm = width_cm;
         v.height_cm = height_cm;
         v.depth_cm = depth_cm;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -249,7 +251,7 @@ impl Product {
         let pos = self.variants.iter().position(|v| v.id == variant_id)
             .ok_or_else(|| AppError::not_found("variant", variant_id.to_string()))?;
         self.variants.remove(pos);
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -261,7 +263,7 @@ impl Product {
         for v in &mut self.variants {
             v.is_default = v.id == variant_id;
         }
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 }

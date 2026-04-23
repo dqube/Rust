@@ -1,24 +1,24 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use uuid::Uuid;
 
+use ddd_domain::{define_aggregate, impl_aggregate, impl_aggregate_events};
 use ddd_shared_kernel::AppError;
 
 use crate::domain::ids::BrandId;
 
-#[derive(Debug, Clone)]
-pub struct Brand {
-    pub id:          BrandId,
+define_aggregate!(Brand, BrandId, {
     pub name:        String,
     pub description: Option<String>,
     pub slug:        Option<String>,
     pub logo_url:    Option<String>,
     pub website:     Option<String>,
     pub is_active:   bool,
-    pub created_at:  DateTime<Utc>,
     pub created_by:  Option<String>,
-    pub updated_at:  Option<DateTime<Utc>>,
     pub updated_by:  Option<String>,
-}
+});
+
+impl_aggregate!(Brand, BrandId);
+impl_aggregate_events!(Brand);
 
 impl Brand {
     pub fn create(
@@ -29,19 +29,22 @@ impl Brand {
         if name.trim().is_empty() {
             return Err(AppError::validation("name", "Brand name cannot be empty"));
         }
+        let now  = Utc::now();
         let slug = slugify(&name);
         Ok(Self {
-            id: BrandId::from_uuid(Uuid::new_v4()),
+            id:            BrandId::from_uuid(Uuid::new_v4()),
+            version:       0,
+            domain_events: Vec::new(),
+            created_at:    now,
+            updated_at:    now,
             name,
             description,
-            slug: Some(slug),
-            logo_url: None,
+            slug:          Some(slug),
+            logo_url:      None,
             website,
-            is_active: true,
-            created_at: Utc::now(),
-            created_by: None,
-            updated_at: None,
-            updated_by: None,
+            is_active:     true,
+            created_by:    None,
+            updated_by:    None,
         })
     }
 
@@ -57,7 +60,7 @@ impl Brand {
         self.name = name;
         self.description = description;
         self.website = website;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -66,7 +69,7 @@ impl Brand {
             return Err(AppError::conflict("Brand is already active"));
         }
         self.is_active = true;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 
@@ -75,7 +78,7 @@ impl Brand {
             return Err(AppError::conflict("Brand is already inactive"));
         }
         self.is_active = false;
-        self.updated_at = Some(Utc::now());
+        self.updated_at = Utc::now();
         Ok(())
     }
 }

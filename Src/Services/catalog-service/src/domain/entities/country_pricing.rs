@@ -1,16 +1,15 @@
 use chrono::{DateTime, Utc};
+use ddd_domain::define_entity;
 use uuid::Uuid;
 
 use crate::domain::ids::{PricingId, ProductId};
 
-#[derive(Debug, Clone)]
-pub struct CountryPricing {
-    pub id:             PricingId,
+define_entity!(CountryPricing, PricingId, {
     pub product_id:     ProductId,
     pub country_code:   String,
     pub price:          f64,
     pub effective_date: DateTime<Utc>,
-}
+});
 
 impl CountryPricing {
     pub fn create(

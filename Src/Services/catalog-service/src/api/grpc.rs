@@ -74,7 +74,7 @@ fn to_product_message(p: Product) -> ProductMessage {
         variants:                p.variants.into_iter().map(to_variant_message).collect(),
         images:                  p.images.into_iter().map(to_image_message).collect(),
         created_at:              p.created_at.to_rfc3339(),
-        updated_at:              p.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:              p.updated_at.to_rfc3339(),
     }
 }
 
@@ -132,7 +132,7 @@ fn to_brand_message(b: Brand) -> BrandMessage {
         website:     b.website.unwrap_or_default(),
         is_active:   b.is_active,
         created_at:  b.created_at.to_rfc3339(),
-        updated_at:  b.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:  b.updated_at.to_rfc3339(),
     }
 }
 
@@ -150,7 +150,7 @@ fn to_tax_message(tc: TaxConfiguration) -> TaxConfigMessage {
         effective_date: tc.effective_date.to_rfc3339(),
         expiry_date:    tc.expiry_date.map(|d| d.to_rfc3339()).unwrap_or_default(),
         created_at:     tc.created_at.to_rfc3339(),
-        updated_at:     tc.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:     tc.updated_at.to_rfc3339(),
     }
 }
 

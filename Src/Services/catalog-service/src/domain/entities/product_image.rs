@@ -1,16 +1,15 @@
+use ddd_domain::define_entity;
 use uuid::Uuid;
 
 use crate::domain::ids::{ProductId, ProductImageId};
 
-#[derive(Debug, Clone)]
-pub struct ProductImage {
-    pub id:         ProductImageId,
+define_entity!(ProductImage, ProductImageId, {
     pub product_id: ProductId,
     pub url:        String,
     pub is_main:    bool,
     pub sort_order: i32,
     pub alt_text:   Option<String>,
-}
+});
 
 impl ProductImage {
     pub fn create(

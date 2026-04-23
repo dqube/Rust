@@ -80,6 +80,8 @@ fn m2product(
 ) -> Product {
     Product {
         id:                           ProductId::from_uuid(m.id),
+        version:                      0,
+        domain_events:                Vec::new(),
         sku:                          m.sku,
         name:                         m.name,
         description:                  m.description,
@@ -107,7 +109,7 @@ fn m2product(
         promotion_valid_until:        opt_to_utc(m.promotion_valid_until),
         created_at:                   to_utc(m.created_at),
         created_by:                   m.created_by,
-        updated_at:                   opt_to_utc(m.updated_at),
+        updated_at:                   opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
         updated_by:                   m.updated_by,
         variants,
         images,
@@ -133,8 +135,10 @@ fn m2category(m: category::Model) -> ProductCategory {
 
 fn m2brand(m: brand::Model) -> Brand {
     Brand {
-        id:          BrandId::from_uuid(m.id),
-        name:        m.name,
+        id:           BrandId::from_uuid(m.id),
+        version:      0,
+        domain_events: Vec::new(),
+        name:         m.name,
         description: m.description,
         slug:        m.slug,
         logo_url:    m.logo_url,
@@ -142,7 +146,7 @@ fn m2brand(m: brand::Model) -> Brand {
         is_active:   m.is_active,
         created_at:  to_utc(m.created_at),
         created_by:  m.created_by,
-        updated_at:  opt_to_utc(m.updated_at),
+        updated_at:  opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
         updated_by:  m.updated_by,
     }
 }
@@ -150,6 +154,8 @@ fn m2brand(m: brand::Model) -> Brand {
 fn m2tax(m: tax_configuration::Model) -> TaxConfiguration {
     TaxConfiguration {
         id:             TaxConfigId::from_uuid(m.id),
+        version:        0,
+        domain_events:  Vec::new(),
         name:           m.name,
         code:           m.code,
         tax_type:       m.tax_type,
@@ -161,7 +167,7 @@ fn m2tax(m: tax_configuration::Model) -> TaxConfiguration {
         expiry_date:    opt_to_utc(m.expiry_date),
         created_at:     to_utc(m.created_at),
         created_by:     m.created_by,
-        updated_at:     opt_to_utc(m.updated_at),
+        updated_at:     opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
         updated_by:     m.updated_by,
     }
 }
@@ -287,7 +293,7 @@ impl ProductRepository for PgProductRepository {
             promotion_valid_until:         Set(opt_from_utc(p.promotion_valid_until)),
             created_at:                    Set(from_utc(p.created_at)),
             created_by:                    Set(p.created_by.clone()),
-            updated_at:                    Set(opt_from_utc(p.updated_at)),
+            updated_at:                    Set(Some(from_utc(p.updated_at))),
             updated_by:                    Set(p.updated_by.clone()),
         };
         product::Entity::insert(active)
@@ -518,7 +524,7 @@ impl BrandRepository for PgBrandRepository {
             is_active:   Set(b.is_active),
             created_at:  Set(from_utc(b.created_at)),
             created_by:  Set(b.created_by.clone()),
-            updated_at:  Set(opt_from_utc(b.updated_at)),
+            updated_at:  Set(Some(from_utc(b.updated_at))),
             updated_by:  Set(b.updated_by.clone()),
         };
         brand::Entity::insert(am)
@@ -593,7 +599,7 @@ impl TaxConfigRepository for PgTaxConfigRepository {
             expiry_date:    Set(opt_from_utc(tc.expiry_date)),
             created_at:     Set(from_utc(tc.created_at)),
             created_by:     Set(tc.created_by.clone()),
-            updated_at:     Set(opt_from_utc(tc.updated_at)),
+            updated_at:     Set(Some(from_utc(tc.updated_at))),
             updated_by:     Set(tc.updated_by.clone()),
         };
         tax_configuration::Entity::insert(am)

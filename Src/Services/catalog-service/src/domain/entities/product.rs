@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use ddd_shared_kernel::AppError;
 
-use crate::domain::ids::{BrandId, ProductId, ProductImageId, ProductVariantId};
+use crate::domain::ids::{ProductId, ProductImageId, ProductVariantId};
 
 use super::country_pricing::CountryPricing;
 use super::product_image::ProductImage;
@@ -208,6 +208,7 @@ impl Product {
         self.updated_at = Some(Utc::now());
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_variant(
         &mut self,
         variant_id:          ProductVariantId,

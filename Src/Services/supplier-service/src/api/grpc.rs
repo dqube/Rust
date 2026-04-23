@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use ddd_api::grpc::GrpcErrorExt;
@@ -36,10 +37,6 @@ fn parse_id(s: &str, label: &str) -> Result<Uuid, Status> {
 
 fn parse_opt_id(s: &str) -> Option<Uuid> {
     if s.is_empty() { None } else { Uuid::parse_str(s).ok() }
-}
-
-fn parse_opt_decimal(s: &str) -> Option<rust_decimal::Decimal> {
-    if s.is_empty() { None } else { s.parse().ok() }
 }
 
 fn parse_decimal(s: &str, label: &str) -> Result<rust_decimal::Decimal, Status> {
@@ -217,7 +214,7 @@ impl SupplierService for SupplierGrpcService {
             business_type:             opt_str(&r.business_type),
             notes:                     opt_str(&r.notes),
             created_by:                opt_str(&r.created_by),
-            address_type:   AddressType::from_str(&r.address_type),
+            address_type:   AddressType::from_str(&r.address_type).unwrap(),
             address_line1:  r.address_line1,
             address_city:   r.address_city,
             address_postal: r.address_postal,
@@ -297,7 +294,7 @@ impl SupplierService for SupplierGrpcService {
         let r = req.into_inner();
         let s = self.mediator.send(UpdateSupplierStatus {
             id:         SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
-            status:     SupplierStatus::from_str(&r.status),
+            status:     SupplierStatus::from_str(&r.status).unwrap(),
             updated_by: opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_supplier_message(s)))
@@ -309,7 +306,7 @@ impl SupplierService for SupplierGrpcService {
         let r = req.into_inner();
         let s = self.mediator.send(UpdateOnboardingStatus {
             id:                SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
-            onboarding_status: OnboardingStatus::from_str(&r.onboarding_status),
+            onboarding_status: OnboardingStatus::from_str(&r.onboarding_status).unwrap(),
             updated_by:        opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_supplier_message(s)))

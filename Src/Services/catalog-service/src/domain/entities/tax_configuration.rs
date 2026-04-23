@@ -24,6 +24,7 @@ pub struct TaxConfiguration {
 }
 
 impl TaxConfiguration {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         name:           String,
         code:           String,

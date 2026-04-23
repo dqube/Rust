@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AddressType {
@@ -25,13 +26,17 @@ impl AddressType {
             _ => AddressType::Registered,
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for AddressType {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Billing"   => AddressType::Billing,
             "Shipping"  => AddressType::Shipping,
             "Warehouse" => AddressType::Warehouse,
             _           => AddressType::Registered,
-        }
+        })
     }
 }
 
@@ -111,13 +116,17 @@ impl OnboardingStatus {
             _ => OnboardingStatus::Pending,
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for OnboardingStatus {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "UnderReview" | "Under Review" => OnboardingStatus::UnderReview,
             "Approved"                     => OnboardingStatus::Approved,
             "Rejected"                     => OnboardingStatus::Rejected,
             _                              => OnboardingStatus::Pending,
-        }
+        })
     }
 }
 
@@ -158,13 +167,17 @@ impl SupplierStatus {
             _ => SupplierStatus::Pending,
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for SupplierStatus {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Active"    => SupplierStatus::Active,
             "Inactive"  => SupplierStatus::Inactive,
             "Suspended" => SupplierStatus::Suspended,
             _           => SupplierStatus::Pending,
-        }
+        })
     }
 }
 
@@ -188,14 +201,15 @@ pub enum PurchaseOrderStatus {
     Cancelled,
 }
 
-impl PurchaseOrderStatus {
-    pub fn from_str(s: &str) -> Self {
-        match s {
+impl FromStr for PurchaseOrderStatus {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Ordered"   => PurchaseOrderStatus::Ordered,
             "Received"  => PurchaseOrderStatus::Received,
             "Cancelled" => PurchaseOrderStatus::Cancelled,
             _           => PurchaseOrderStatus::Draft,
-        }
+        })
     }
 }
 

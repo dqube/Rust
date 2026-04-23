@@ -271,6 +271,7 @@ async fn main() {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_nats_subscription<E>(
     js:        async_nats::jetstream::Context,
     stream:    &'static str,

@@ -8,6 +8,7 @@ use super::ids::{BrandId, CategoryId, ProductId, TaxConfigId};
 pub trait ProductRepository: Send + Sync {
     async fn find_by_id(&self, id: ProductId) -> Result<Option<Product>, AppError>;
     async fn find_by_sku(&self, sku: &str) -> Result<Option<Product>, AppError>;
+    #[allow(clippy::too_many_arguments)]
     async fn get_paged(
         &self,
         search:      Option<&str>,

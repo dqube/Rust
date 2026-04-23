@@ -1,4 +1,6 @@
 #![allow(unused_imports)]
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::{
@@ -82,8 +84,8 @@ fn model_to_sale(m: sale::Model, details: Vec<SaleDetail>, discounts: Vec<Applie
         discount_total:         m.discount_total,
         tax_amount:             m.tax_amount,
         total_amount:           m.total_amount,
-        channel:                SalesChannel::from_str(&m.channel),
-        status:                 OrderStatus::from_str(&m.status),
+        channel:                SalesChannel::from_str(&m.channel).unwrap(),
+        status:                 OrderStatus::from_str(&m.status).unwrap(),
         shipping_address,
         billing_address,
         payment_transaction_id: m.payment_transaction_id,
@@ -100,7 +102,7 @@ fn model_to_return_detail(m: return_detail::Model) -> ReturnDetail {
         return_id:  ReturnId(m.return_id),
         product_id: m.product_id,
         quantity:   m.quantity,
-        reason:     ReturnReason::from_str(&m.reason),
+        reason:     ReturnReason::from_str(&m.reason).unwrap(),
         restock:    m.restock,
         created_at: to_utc(m.created_at),
     }
@@ -129,7 +131,7 @@ fn model_to_saga(m: order_saga::Model) -> OrderSaga {
         total:          m.total,
         reservation_id: m.reservation_id,
         payment_id:     m.payment_id,
-        step:           OrderSagaStep::from_str(&m.step),
+        step:           OrderSagaStep::from_str(&m.step).unwrap(),
         failure_reason: m.failure_reason,
         items,
         created_at:     to_utc(m.created_at),

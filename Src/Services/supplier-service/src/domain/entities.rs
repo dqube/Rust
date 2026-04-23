@@ -38,6 +38,7 @@ impl Supplier {
         format!("{}-{}", prefix, Utc::now().timestamp_millis())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         company_name: String,
         tax_identification_number: Option<String>,
@@ -74,6 +75,7 @@ impl Supplier {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         company_name: String,
@@ -146,6 +148,7 @@ pub struct SupplierAddress {
 }
 
 impl SupplierAddress {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         supplier_id: SupplierId,
         address_type: AddressType,
@@ -203,6 +206,7 @@ pub struct SupplierContact {
 }
 
 impl SupplierContact {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         supplier_id: SupplierId,
         contact_type: ContactType,
@@ -292,6 +296,7 @@ pub struct SupplierProduct {
 }
 
 impl SupplierProduct {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         supplier_id: SupplierId,
         product_id: Uuid,

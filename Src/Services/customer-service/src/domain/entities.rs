@@ -124,6 +124,7 @@ impl CustomerAddress {
         Ok(addr)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         label: String,

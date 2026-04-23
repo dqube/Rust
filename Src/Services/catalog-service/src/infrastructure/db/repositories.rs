@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ddd_shared_kernel::{AppError, Page, PageRequest};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, ConnectionTrait, DatabaseConnection,
+    ActiveValue::Set, ColumnTrait, Condition, ConnectionTrait, DatabaseConnection,
     EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
 };
 use uuid::Uuid;

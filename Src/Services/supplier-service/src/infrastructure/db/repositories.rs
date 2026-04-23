@@ -1,10 +1,11 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use ddd_shared_kernel::{AppError, Page, PageRequest};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
+    ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
     PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
 };
 use uuid::Uuid;
@@ -155,7 +156,7 @@ fn m2order(m: purchase_order::Model, details: Vec<PurchaseOrderDetail>) -> Purch
         store_id:            m.store_id,
         order_date:          to_utc(m.order_date),
         expected_date:       opt_to_utc(m.expected_date),
-        status:              PurchaseOrderStatus::from_str(&m.status),
+        status:              PurchaseOrderStatus::from_str(&m.status).unwrap(),
         total_amount:        m.total_amount,
         shipping_address_id: m.shipping_address_id.map(AddressId::from_uuid),
         contact_person_id:   m.contact_person_id.map(ContactId::from_uuid),

@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use ddd_api::grpc::GrpcErrorExt;
@@ -63,11 +64,11 @@ fn parse_opt_datetime(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
 }
 
 fn parse_channel(s: &str) -> SalesChannel {
-    SalesChannel::from_str(s)
+    SalesChannel::from_str(s).unwrap()
 }
 
 fn parse_return_reason(s: &str) -> ReturnReason {
-    ReturnReason::from_str(s)
+    ReturnReason::from_str(s).unwrap()
 }
 
 fn to_sale_detail_info(d: &SaleDetailDto) -> SaleDetailInfo {
@@ -284,7 +285,7 @@ impl SalesService for SalesGrpcService {
         let status    = if r.status.is_empty() { None } else { Some(r.status) };
         let (items, total) = self.mediator.query(GetSales { page, page_size, status }).await
             .map_err(|e| e.to_grpc_status())?;
-        let total_pages = if page_size > 0 { ((total as i32 + page_size - 1) / page_size) } else { 0 };
+        let total_pages = if page_size > 0 { (total as i32 + page_size - 1) / page_size } else { 0 };
         Ok(Response::new(GetSalesResponse {
             items:       items.iter().map(to_sale_info).collect(),
             total_count: total as i32,

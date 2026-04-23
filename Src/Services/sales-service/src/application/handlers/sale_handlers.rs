@@ -1,5 +1,6 @@
 //! Sale command and query handlers, self-registered via Mediator.
 
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -267,7 +268,7 @@ pub struct UpdateSaleStatusHandler {
 impl CommandHandler<UpdateSaleStatus> for UpdateSaleStatusHandler {
     async fn handle(&self, cmd: UpdateSaleStatus) -> AppResult<()> {
         let mut sale = load_sale(&self.repo, cmd.sale_id).await?;
-        sale.status = OrderStatus::from_str(&cmd.status);
+        sale.status = OrderStatus::from_str(&cmd.status).unwrap();
         self.repo.save(&mut sale).await
     }
 }

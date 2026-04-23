@@ -42,6 +42,7 @@ impl Employee {
         format!("EMP-{}", Utc::now().timestamp_millis())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         user_id: Uuid,
         first_name: String,
@@ -94,6 +95,7 @@ impl Employee {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         first_name: String,

@@ -22,6 +22,7 @@ pub struct ProductVariant {
 }
 
 impl ProductVariant {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         product_id:          ProductId,
         sku:                 String,

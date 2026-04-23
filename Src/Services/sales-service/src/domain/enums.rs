@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,8 +22,12 @@ impl OrderStatus {
             OrderStatus::Completed  => "Completed",
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for OrderStatus {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Confirmed"  => OrderStatus::Confirmed,
             "Paid"       => OrderStatus::Paid,
             "Processing" => OrderStatus::Processing,
@@ -31,7 +37,7 @@ impl OrderStatus {
             "Returned"   => OrderStatus::Returned,
             "Completed"  => OrderStatus::Completed,
             _            => OrderStatus::Pending,
-        }
+        })
     }
 }
 
@@ -48,12 +54,16 @@ impl SalesChannel {
             SalesChannel::MobileApp => "MobileApp",
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for SalesChannel {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "Online"    => SalesChannel::Online,
             "MobileApp" => SalesChannel::MobileApp,
             _           => SalesChannel::InStore,
-        }
+        })
     }
 }
 
@@ -73,15 +83,19 @@ impl ReturnReason {
             ReturnReason::Other           => "Other",
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for ReturnReason {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "WrongItem"       => ReturnReason::WrongItem,
             "CustomerChanged" => ReturnReason::CustomerChanged,
             "Damaged"         => ReturnReason::Damaged,
             "NotAsDescribed"  => ReturnReason::NotAsDescribed,
             "Other"           => ReturnReason::Other,
             _                 => ReturnReason::Defective,
-        }
+        })
     }
 }
 
@@ -102,12 +116,16 @@ impl OrderSagaStep {
             OrderSagaStep::Failed                     => "Failed",
         }
     }
-    pub fn from_str(s: &str) -> Self {
-        match s {
+}
+
+impl FromStr for OrderSagaStep {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "WaitingForPayment" => OrderSagaStep::WaitingForPayment,
             "Confirmed"         => OrderSagaStep::Confirmed,
             "Failed"            => OrderSagaStep::Failed,
             _                   => OrderSagaStep::WaitingForStockReservation,
-        }
+        })
     }
 }

@@ -52,7 +52,7 @@ impl CommandHandler<SubmitPurchaseOrder> for SubmitPurchaseOrderHandler {
     async fn handle(&self, cmd: SubmitPurchaseOrder) -> AppResult<PurchaseOrder> {
         let mut order = self.repo.find_by_id(cmd.id).await?
             .ok_or_else(|| AppError::not_found("PurchaseOrder", cmd.id.to_string()))?;
-        order.submit(cmd.updated_by).map_err(|e| AppError::conflict(e))?;
+        order.submit(cmd.updated_by).map_err(AppError::conflict)?;
         self.repo.save(&order).await?;
         Ok(order)
     }
@@ -73,7 +73,7 @@ impl CommandHandler<CancelPurchaseOrder> for CancelPurchaseOrderHandler {
     async fn handle(&self, cmd: CancelPurchaseOrder) -> AppResult<PurchaseOrder> {
         let mut order = self.repo.find_by_id(cmd.id).await?
             .ok_or_else(|| AppError::not_found("PurchaseOrder", cmd.id.to_string()))?;
-        order.cancel(cmd.updated_by).map_err(|e| AppError::conflict(e))?;
+        order.cancel(cmd.updated_by).map_err(AppError::conflict)?;
         self.repo.save(&order).await?;
         Ok(order)
     }

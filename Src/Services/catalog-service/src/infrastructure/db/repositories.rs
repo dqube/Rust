@@ -33,8 +33,8 @@ fn opt_from_utc(dt: Option<DateTime<Utc>>) -> Option<sea_orm::prelude::DateTimeW
 
 fn m2variant(m: product_variant::Model) -> ProductVariant {
     ProductVariant {
-        id:                  ProductVariantId(m.id),
-        product_id:          ProductId(m.product_id),
+        id:                  ProductVariantId::from_uuid(m.id),
+        product_id:          ProductId::from_uuid(m.product_id),
         sku:                 m.sku,
         description:         m.description,
         price_override:      m.price_override,
@@ -53,8 +53,8 @@ fn m2variant(m: product_variant::Model) -> ProductVariant {
 
 fn m2image(m: product_image::Model) -> ProductImage {
     ProductImage {
-        id:         ProductImageId(m.id),
-        product_id: ProductId(m.product_id),
+        id:         ProductImageId::from_uuid(m.id),
+        product_id: ProductId::from_uuid(m.product_id),
         url:        m.url,
         is_main:    m.is_main,
         sort_order: m.sort_order,
@@ -64,8 +64,8 @@ fn m2image(m: product_image::Model) -> ProductImage {
 
 fn m2pricing(m: country_pricing::Model) -> CountryPricing {
     CountryPricing {
-        id:             PricingId(m.id),
-        product_id:     ProductId(m.product_id),
+        id:             PricingId::from_uuid(m.id),
+        product_id:     ProductId::from_uuid(m.product_id),
         country_code:   m.country_code,
         price:          m.price,
         effective_date: to_utc(m.effective_date),
@@ -79,7 +79,7 @@ fn m2product(
     pricing:  Vec<CountryPricing>,
 ) -> Product {
     Product {
-        id:                           ProductId(m.id),
+        id:                           ProductId::from_uuid(m.id),
         sku:                          m.sku,
         name:                         m.name,
         description:                  m.description,
@@ -133,7 +133,7 @@ fn m2category(m: category::Model) -> ProductCategory {
 
 fn m2brand(m: brand::Model) -> Brand {
     Brand {
-        id:          BrandId(m.id),
+        id:          BrandId::from_uuid(m.id),
         name:        m.name,
         description: m.description,
         slug:        m.slug,
@@ -149,7 +149,7 @@ fn m2brand(m: brand::Model) -> Brand {
 
 fn m2tax(m: tax_configuration::Model) -> TaxConfiguration {
     TaxConfiguration {
-        id:             TaxConfigId(m.id),
+        id:             TaxConfigId::from_uuid(m.id),
         name:           m.name,
         code:           m.code,
         tax_type:       m.tax_type,
@@ -195,7 +195,7 @@ impl PgProductRepository {
 #[async_trait]
 impl ProductRepository for PgProductRepository {
     async fn find_by_id(&self, id: ProductId) -> Result<Option<Product>, AppError> {
-        let Some(m) = product::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)? else {
+        let Some(m) = product::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)? else {
             return Ok(None);
         };
         Ok(Some(self.load_full(m).await?))
@@ -242,15 +242,15 @@ impl ProductRepository for PgProductRepository {
         };
 
         let total = q.clone().count(&*self.0).await.map_err(db_err)?;
-        let page   = req.page.max(1);
-        let limit  = req.per_page.max(1);
+        let page   = req.page().max(1);
+        let limit  = req.per_page().max(1);
         let offset = ((page - 1) * limit) as u64;
 
         let models = q.offset(offset).limit(limit as u64).all(&*self.0).await.map_err(db_err)?;
         let mut items = Vec::new();
         for m in models { items.push(self.load_full(m).await?); }
 
-        Ok(Page::new(items, total, req))
+        Ok(Page::new(items, total, page, limit))
     }
 
     async fn save(&self, p: &Product) -> Result<(), AppError> {
@@ -259,7 +259,7 @@ impl ProductRepository for PgProductRepository {
         let tids  = serde_json::to_value(&p.assigned_tax_config_ids).map_err(|e| AppError::internal(e.to_string()))?;
 
         let active = product::ActiveModel {
-            id:                            Set(p.id.0),
+            id:                            Set(p.id.as_uuid()),
             sku:                           Set(p.sku.clone()),
             name:                          Set(p.name.clone()),
             description:                   Set(p.description.clone()),
@@ -314,10 +314,10 @@ impl ProductRepository for PgProductRepository {
 
         // Sync variants: delete removed, upsert remaining
         let existing_variant_ids: Vec<Uuid> = product_variant::Entity::find()
-            .filter(product_variant::Column::ProductId.eq(p.id.0))
+            .filter(product_variant::Column::ProductId.eq(p.id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(|m| m.id).collect();
-        let current_variant_ids: std::collections::HashSet<Uuid> = p.variants.iter().map(|v| v.id.0).collect();
+        let current_variant_ids: std::collections::HashSet<Uuid> = p.variants.iter().map(|v| v.id.as_uuid()).collect();
         for old_id in &existing_variant_ids {
             if !current_variant_ids.contains(old_id) {
                 product_variant::Entity::delete_by_id(*old_id).exec(&*self.0).await.map_err(db_err)?;
@@ -326,8 +326,8 @@ impl ProductRepository for PgProductRepository {
         for v in &p.variants {
             let attrs = serde_json::to_value(&v.attributes).map_err(|e| AppError::internal(e.to_string()))?;
             let am = product_variant::ActiveModel {
-                id:                  Set(v.id.0),
-                product_id:          Set(p.id.0),
+                id:                  Set(v.id.as_uuid()),
+                product_id:          Set(p.id.as_uuid()),
                 sku:                 Set(v.sku.clone()),
                 description:         Set(v.description.clone()),
                 price_override:      Set(v.price_override),
@@ -361,10 +361,10 @@ impl ProductRepository for PgProductRepository {
 
         // Sync images: delete removed, upsert remaining
         let existing_image_ids: Vec<Uuid> = product_image::Entity::find()
-            .filter(product_image::Column::ProductId.eq(p.id.0))
+            .filter(product_image::Column::ProductId.eq(p.id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(|m| m.id).collect();
-        let current_image_ids: std::collections::HashSet<Uuid> = p.images.iter().map(|i| i.id.0).collect();
+        let current_image_ids: std::collections::HashSet<Uuid> = p.images.iter().map(|i| i.id.as_uuid()).collect();
         for old_id in &existing_image_ids {
             if !current_image_ids.contains(old_id) {
                 product_image::Entity::delete_by_id(*old_id).exec(&*self.0).await.map_err(db_err)?;
@@ -372,8 +372,8 @@ impl ProductRepository for PgProductRepository {
         }
         for img in &p.images {
             let am = product_image::ActiveModel {
-                id:         Set(img.id.0),
-                product_id: Set(p.id.0),
+                id:         Set(img.id.as_uuid()),
+                product_id: Set(p.id.as_uuid()),
                 url:        Set(img.url.clone()),
                 is_main:    Set(img.is_main),
                 sort_order: Set(img.sort_order),
@@ -479,7 +479,7 @@ pub struct PgBrandRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl BrandRepository for PgBrandRepository {
     async fn find_by_id(&self, id: BrandId) -> Result<Option<Brand>, AppError> {
-        Ok(brand::Entity::find_by_id(id.0)
+        Ok(brand::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(m2brand))
     }
@@ -497,19 +497,19 @@ impl BrandRepository for PgBrandRepository {
         }
         q = q.order_by(brand::Column::Name, Order::Asc);
         let total = q.clone().count(&*self.0).await.map_err(db_err)?;
-        let page  = req.page.max(1);
-        let limit = req.per_page.max(1);
+        let page  = req.page().max(1);
+        let limit = req.per_page().max(1);
         let items = q
             .offset(((page - 1) * limit) as u64)
             .limit(limit as u64)
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2brand).collect();
-        Ok(Page::new(items, total, req))
+        Ok(Page::new(items, total, page, limit))
     }
 
     async fn save(&self, b: &Brand) -> Result<(), AppError> {
         let am = brand::ActiveModel {
-            id:          Set(b.id.0),
+            id:          Set(b.id.as_uuid()),
             name:        Set(b.name.clone()),
             description: Set(b.description.clone()),
             slug:        Set(b.slug.clone()),
@@ -543,7 +543,7 @@ pub struct PgTaxConfigRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl TaxConfigRepository for PgTaxConfigRepository {
     async fn find_by_id(&self, id: TaxConfigId) -> Result<Option<TaxConfiguration>, AppError> {
-        Ok(tax_configuration::Entity::find_by_id(id.0)
+        Ok(tax_configuration::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(m2tax))
     }
@@ -581,7 +581,7 @@ impl TaxConfigRepository for PgTaxConfigRepository {
 
     async fn save(&self, tc: &TaxConfiguration) -> Result<(), AppError> {
         let am = tax_configuration::ActiveModel {
-            id:             Set(tc.id.0),
+            id:             Set(tc.id.as_uuid()),
             name:           Set(tc.name.clone()),
             code:           Set(tc.code.clone()),
             tax_type:       Set(tc.tax_type.clone()),
@@ -613,7 +613,7 @@ impl TaxConfigRepository for PgTaxConfigRepository {
     }
 
     async fn delete(&self, id: TaxConfigId) -> Result<(), AppError> {
-        tax_configuration::Entity::delete_by_id(id.0).exec(&*self.0).await.map_err(db_err)?;
+        tax_configuration::Entity::delete_by_id(id.as_uuid()).exec(&*self.0).await.map_err(db_err)?;
         Ok(())
     }
 }

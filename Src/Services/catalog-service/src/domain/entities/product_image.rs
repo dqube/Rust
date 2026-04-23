@@ -21,7 +21,7 @@ impl ProductImage {
         alt_text:   Option<String>,
     ) -> Self {
         Self {
-            id: ProductImageId(Uuid::new_v4()),
+            id: ProductImageId::from_uuid(Uuid::new_v4()),
             product_id,
             url,
             is_main,

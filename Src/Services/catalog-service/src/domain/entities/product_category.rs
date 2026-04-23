@@ -27,7 +27,7 @@ impl ProductCategory {
         parent_category_id: Option<i32>,
     ) -> Result<Self, AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Category name cannot be empty"));
+            return Err(AppError::validation("name", "Category name cannot be empty"));
         }
         let slug = slugify(&name);
         Ok(Self {
@@ -52,7 +52,7 @@ impl ProductCategory {
         parent_category_id: Option<i32>,
     ) -> Result<(), AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Category name cannot be empty"));
+            return Err(AppError::validation("name", "Category name cannot be empty"));
         }
         self.name = name;
         self.description = description;

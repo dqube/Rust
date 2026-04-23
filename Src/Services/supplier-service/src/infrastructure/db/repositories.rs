@@ -38,7 +38,7 @@ fn opt_from_utc(dt: Option<DateTime<Utc>>) -> Option<sea_orm::prelude::DateTimeW
 
 fn m2supplier(m: supplier::Model) -> Supplier {
     Supplier {
-        id:                        SupplierId(m.id),
+        id:                        SupplierId::from_uuid(m.id),
         user_id:                   m.user_id,
         supplier_code:             m.supplier_code,
         company_name:              m.company_name,
@@ -63,8 +63,8 @@ fn m2supplier(m: supplier::Model) -> Supplier {
 
 fn m2address(m: supplier_address::Model) -> SupplierAddress {
     SupplierAddress {
-        id:           AddressId(m.id),
-        supplier_id:  SupplierId(m.supplier_id),
+        id:           AddressId::from_uuid(m.id),
+        supplier_id:  SupplierId::from_uuid(m.supplier_id),
         address_type: AddressType::from_i32(m.address_type),
         line1:        m.line1,
         line2:        m.line2,
@@ -83,8 +83,8 @@ fn m2address(m: supplier_address::Model) -> SupplierAddress {
 
 fn m2contact(m: supplier_contact::Model) -> SupplierContact {
     SupplierContact {
-        id:           ContactId(m.id),
-        supplier_id:  SupplierId(m.supplier_id),
+        id:           ContactId::from_uuid(m.id),
+        supplier_id:  SupplierId::from_uuid(m.supplier_id),
         user_id:      m.user_id,
         contact_type: ContactType::from_i32(m.contact_type),
         first_name:   m.first_name,
@@ -106,8 +106,8 @@ fn m2contact(m: supplier_contact::Model) -> SupplierContact {
 
 fn m2document(m: supplier_document::Model) -> SupplierDocument {
     SupplierDocument {
-        id:            DocumentId(m.id),
-        supplier_id:   SupplierId(m.supplier_id),
+        id:            DocumentId::from_uuid(m.id),
+        supplier_id:   SupplierId::from_uuid(m.supplier_id),
         file_name:     m.file_name,
         object_name:   m.object_name,
         content_type:  m.content_type,
@@ -119,8 +119,8 @@ fn m2document(m: supplier_document::Model) -> SupplierDocument {
 
 fn m2product(m: supplier_product::Model) -> SupplierProduct {
     SupplierProduct {
-        id:                 SupplierProductId(m.id),
-        supplier_id:        SupplierId(m.supplier_id),
+        id:                 SupplierProductId::from_uuid(m.id),
+        supplier_id:        SupplierId::from_uuid(m.supplier_id),
         product_id:         m.product_id,
         variant_id:         m.variant_id,
         supplier_sku:       m.supplier_sku,
@@ -137,8 +137,8 @@ fn m2product(m: supplier_product::Model) -> SupplierProduct {
 
 fn m2order_detail(m: purchase_order_detail::Model) -> PurchaseOrderDetail {
     PurchaseOrderDetail {
-        id:                OrderDetailId(m.id),
-        order_id:          OrderId(m.order_id),
+        id:                OrderDetailId::from_uuid(m.id),
+        order_id:          OrderId::from_uuid(m.order_id),
         product_id:        m.product_id,
         quantity:          m.quantity,
         unit_cost:         m.unit_cost,
@@ -150,15 +150,15 @@ fn m2order_detail(m: purchase_order_detail::Model) -> PurchaseOrderDetail {
 
 fn m2order(m: purchase_order::Model, details: Vec<PurchaseOrderDetail>) -> PurchaseOrder {
     PurchaseOrder {
-        id:                  OrderId(m.id),
-        supplier_id:         SupplierId(m.supplier_id),
+        id:                  OrderId::from_uuid(m.id),
+        supplier_id:         SupplierId::from_uuid(m.supplier_id),
         store_id:            m.store_id,
         order_date:          to_utc(m.order_date),
         expected_date:       opt_to_utc(m.expected_date),
         status:              PurchaseOrderStatus::from_str(&m.status),
         total_amount:        m.total_amount,
-        shipping_address_id: m.shipping_address_id.map(AddressId),
-        contact_person_id:   m.contact_person_id.map(ContactId),
+        shipping_address_id: m.shipping_address_id.map(AddressId::from_uuid),
+        contact_person_id:   m.contact_person_id.map(ContactId::from_uuid),
         created_at:          to_utc(m.created_at),
         created_by:          m.created_by,
         updated_at:          opt_to_utc(m.updated_at),
@@ -174,7 +174,7 @@ pub struct PgSupplierRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SupplierRepository for PgSupplierRepository {
     async fn find_by_id(&self, id: SupplierId) -> Result<Option<Supplier>, AppError> {
-        Ok(supplier::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)?.map(m2supplier))
+        Ok(supplier::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)?.map(m2supplier))
     }
 
     async fn get_paged(&self, active_only: bool, search: Option<&str>, req: &PageRequest) -> Result<Page<Supplier>, AppError> {
@@ -188,8 +188,8 @@ impl SupplierRepository for PgSupplierRepository {
             }
         }
         let total    = q.clone().count(&*self.0).await.map_err(db_err)? as u64;
-        let page     = req.page.max(1);
-        let per_page = req.per_page.max(1);
+        let page     = req.page().max(1);
+        let per_page = req.per_page().max(1);
         let offset   = ((page - 1) * per_page) as u64;
         let items    = q.order_by_asc(supplier::Column::CompanyName)
             .offset(offset).limit(per_page as u64)
@@ -212,7 +212,7 @@ impl SupplierRepository for PgSupplierRepository {
 
     async fn save(&self, s: &Supplier) -> Result<(), AppError> {
         let active = supplier::ActiveModel {
-            id:                        Set(s.id.0),
+            id:                        Set(s.id.as_uuid()),
             user_id:                   Set(s.user_id),
             supplier_code:             Set(s.supplier_code.clone()),
             company_name:              Set(s.company_name.clone()),
@@ -261,7 +261,7 @@ impl SupplierRepository for PgSupplierRepository {
     }
 
     async fn delete(&self, id: SupplierId) -> Result<(), AppError> {
-        supplier::Entity::delete_by_id(id.0).exec(&*self.0).await.map_err(db_err)?;
+        supplier::Entity::delete_by_id(id.as_uuid()).exec(&*self.0).await.map_err(db_err)?;
         Ok(())
     }
 }
@@ -273,18 +273,18 @@ pub struct PgSupplierAddressRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SupplierAddressRepository for PgSupplierAddressRepository {
     async fn find_by_id(&self, id: AddressId) -> Result<Option<SupplierAddress>, AppError> {
-        Ok(supplier_address::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)?.map(m2address))
+        Ok(supplier_address::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)?.map(m2address))
     }
     async fn get_by_supplier(&self, supplier_id: SupplierId) -> Result<Vec<SupplierAddress>, AppError> {
         Ok(supplier_address::Entity::find()
-            .filter(supplier_address::Column::SupplierId.eq(supplier_id.0))
+            .filter(supplier_address::Column::SupplierId.eq(supplier_id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2address).collect())
     }
     async fn save(&self, a: &SupplierAddress) -> Result<(), AppError> {
         let active = supplier_address::ActiveModel {
-            id:           Set(a.id.0),
-            supplier_id:  Set(a.supplier_id.0),
+            id:           Set(a.id.as_uuid()),
+            supplier_id:  Set(a.supplier_id.as_uuid()),
             address_type: Set(a.address_type.as_i32()),
             line1:        Set(a.line1.clone()),
             line2:        Set(a.line2.clone()),
@@ -324,18 +324,18 @@ pub struct PgSupplierContactRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SupplierContactRepository for PgSupplierContactRepository {
     async fn find_by_id(&self, id: ContactId) -> Result<Option<SupplierContact>, AppError> {
-        Ok(supplier_contact::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)?.map(m2contact))
+        Ok(supplier_contact::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)?.map(m2contact))
     }
     async fn get_by_supplier(&self, supplier_id: SupplierId) -> Result<Vec<SupplierContact>, AppError> {
         Ok(supplier_contact::Entity::find()
-            .filter(supplier_contact::Column::SupplierId.eq(supplier_id.0))
+            .filter(supplier_contact::Column::SupplierId.eq(supplier_id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2contact).collect())
     }
     async fn save(&self, c: &SupplierContact) -> Result<(), AppError> {
         let active = supplier_contact::ActiveModel {
-            id:           Set(c.id.0),
-            supplier_id:  Set(c.supplier_id.0),
+            id:           Set(c.id.as_uuid()),
+            supplier_id:  Set(c.supplier_id.as_uuid()),
             user_id:      Set(c.user_id),
             contact_type: Set(c.contact_type.as_i32()),
             first_name:   Set(c.first_name.clone()),
@@ -380,18 +380,18 @@ pub struct PgSupplierDocumentRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SupplierDocumentRepository for PgSupplierDocumentRepository {
     async fn find_by_id(&self, id: DocumentId) -> Result<Option<SupplierDocument>, AppError> {
-        Ok(supplier_document::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)?.map(m2document))
+        Ok(supplier_document::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)?.map(m2document))
     }
     async fn get_by_supplier(&self, supplier_id: SupplierId) -> Result<Vec<SupplierDocument>, AppError> {
         Ok(supplier_document::Entity::find()
-            .filter(supplier_document::Column::SupplierId.eq(supplier_id.0))
+            .filter(supplier_document::Column::SupplierId.eq(supplier_id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2document).collect())
     }
     async fn save(&self, d: &SupplierDocument) -> Result<(), AppError> {
         let active = supplier_document::ActiveModel {
-            id:            Set(d.id.0),
-            supplier_id:   Set(d.supplier_id.0),
+            id:            Set(d.id.as_uuid()),
+            supplier_id:   Set(d.supplier_id.as_uuid()),
             file_name:     Set(d.file_name.clone()),
             object_name:   Set(d.object_name.clone()),
             content_type:  Set(d.content_type.clone()),
@@ -409,7 +409,7 @@ impl SupplierDocumentRepository for PgSupplierDocumentRepository {
         Ok(())
     }
     async fn delete(&self, id: DocumentId) -> Result<(), AppError> {
-        supplier_document::Entity::delete_by_id(id.0).exec(&*self.0).await.map_err(db_err)?;
+        supplier_document::Entity::delete_by_id(id.as_uuid()).exec(&*self.0).await.map_err(db_err)?;
         Ok(())
     }
 }
@@ -421,17 +421,17 @@ pub struct PgSupplierProductRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SupplierProductRepository for PgSupplierProductRepository {
     async fn find_by_id(&self, id: SupplierProductId) -> Result<Option<SupplierProduct>, AppError> {
-        Ok(supplier_product::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)?.map(m2product))
+        Ok(supplier_product::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)?.map(m2product))
     }
     async fn get_by_supplier(&self, supplier_id: SupplierId) -> Result<Vec<SupplierProduct>, AppError> {
         Ok(supplier_product::Entity::find()
-            .filter(supplier_product::Column::SupplierId.eq(supplier_id.0))
+            .filter(supplier_product::Column::SupplierId.eq(supplier_id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2product).collect())
     }
     async fn exists(&self, supplier_id: SupplierId, product_id: Uuid, variant_id: Option<Uuid>) -> Result<bool, AppError> {
         let mut q = supplier_product::Entity::find()
-            .filter(supplier_product::Column::SupplierId.eq(supplier_id.0))
+            .filter(supplier_product::Column::SupplierId.eq(supplier_id.as_uuid()))
             .filter(supplier_product::Column::ProductId.eq(product_id));
         if let Some(vid) = variant_id {
             q = q.filter(supplier_product::Column::VariantId.eq(vid));
@@ -442,8 +442,8 @@ impl SupplierProductRepository for PgSupplierProductRepository {
     }
     async fn save(&self, p: &SupplierProduct) -> Result<(), AppError> {
         let active = supplier_product::ActiveModel {
-            id:                 Set(p.id.0),
-            supplier_id:        Set(p.supplier_id.0),
+            id:                 Set(p.id.as_uuid()),
+            supplier_id:        Set(p.supplier_id.as_uuid()),
             product_id:         Set(p.product_id),
             variant_id:         Set(p.variant_id),
             supplier_sku:       Set(p.supplier_sku.clone()),
@@ -474,7 +474,7 @@ impl SupplierProductRepository for PgSupplierProductRepository {
         Ok(())
     }
     async fn delete(&self, id: SupplierProductId) -> Result<(), AppError> {
-        supplier_product::Entity::delete_by_id(id.0).exec(&*self.0).await.map_err(db_err)?;
+        supplier_product::Entity::delete_by_id(id.as_uuid()).exec(&*self.0).await.map_err(db_err)?;
         Ok(())
     }
 }
@@ -486,11 +486,11 @@ pub struct PgPurchaseOrderRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl PurchaseOrderRepository for PgPurchaseOrderRepository {
     async fn find_by_id(&self, id: OrderId) -> Result<Option<PurchaseOrder>, AppError> {
-        let Some(m) = purchase_order::Entity::find_by_id(id.0).one(&*self.0).await.map_err(db_err)? else {
+        let Some(m) = purchase_order::Entity::find_by_id(id.as_uuid()).one(&*self.0).await.map_err(db_err)? else {
             return Ok(None);
         };
         let details = purchase_order_detail::Entity::find()
-            .filter(purchase_order_detail::Column::OrderId.eq(id.0))
+            .filter(purchase_order_detail::Column::OrderId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(m2order_detail).collect();
         Ok(Some(m2order(m, details)))
@@ -505,7 +505,7 @@ impl PurchaseOrderRepository for PgPurchaseOrderRepository {
         to: Option<DateTime<Utc>>,
     ) -> Result<Vec<PurchaseOrder>, AppError> {
         let mut q = purchase_order::Entity::find();
-        if let Some(sid) = supplier_id { q = q.filter(purchase_order::Column::SupplierId.eq(sid.0)); }
+        if let Some(sid) = supplier_id { q = q.filter(purchase_order::Column::SupplierId.eq(sid.as_uuid())); }
         if let Some(stid) = store_id   { q = q.filter(purchase_order::Column::StoreId.eq(stid)); }
         if let Some(st) = status       { q = q.filter(purchase_order::Column::Status.eq(st.to_string())); }
         if let Some(f)  = from         { q = q.filter(purchase_order::Column::OrderDate.gte(f.fixed_offset())); }
@@ -525,15 +525,15 @@ impl PurchaseOrderRepository for PgPurchaseOrderRepository {
 
     async fn save(&self, o: &PurchaseOrder) -> Result<(), AppError> {
         let active = purchase_order::ActiveModel {
-            id:                  Set(o.id.0),
-            supplier_id:         Set(o.supplier_id.0),
+            id:                  Set(o.id.as_uuid()),
+            supplier_id:         Set(o.supplier_id.as_uuid()),
             store_id:            Set(o.store_id),
             order_date:          Set(from_utc(o.order_date)),
             expected_date:       Set(opt_from_utc(o.expected_date)),
             status:              Set(o.status.to_string()),
             total_amount:        Set(o.total_amount),
-            shipping_address_id: Set(o.shipping_address_id.map(|i| i.0)),
-            contact_person_id:   Set(o.contact_person_id.map(|i| i.0)),
+            shipping_address_id: Set(o.shipping_address_id.map(|i| i.as_uuid())),
+            contact_person_id:   Set(o.contact_person_id.map(|i| i.as_uuid())),
             created_at:          Set(from_utc(o.created_at)),
             created_by:          Set(o.created_by),
             updated_at:          Set(opt_from_utc(o.updated_at)),
@@ -557,14 +557,14 @@ impl PurchaseOrderRepository for PgPurchaseOrderRepository {
 
         // Replace details
         purchase_order_detail::Entity::delete_many()
-            .filter(purchase_order_detail::Column::OrderId.eq(o.id.0))
+            .filter(purchase_order_detail::Column::OrderId.eq(o.id.as_uuid()))
             .exec(&*self.0).await.map_err(db_err)?;
 
         if !o.order_details.is_empty() {
             let details: Vec<purchase_order_detail::ActiveModel> = o.order_details.iter().map(|d| {
                 purchase_order_detail::ActiveModel {
-                    id:                Set(d.id.0),
-                    order_id:          Set(d.order_id.0),
+                    id:                Set(d.id.as_uuid()),
+                    order_id:          Set(d.order_id.as_uuid()),
                     product_id:        Set(d.product_id),
                     quantity:          Set(d.quantity),
                     unit_cost:         Set(d.unit_cost),

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ddd_api::grpc::ToGrpcStatus;
+use ddd_api::grpc::GrpcErrorExt;
 use ddd_application::Mediator;
 use ddd_shared_kernel::PageRequest;
 use tonic::{Request, Response, Status};
@@ -246,15 +246,15 @@ impl EmployeeService for EmployeeGrpcService {
             status_filter: if r.status_filter.is_empty() { None } else { Some(r.status_filter) },
             department_id: parse_opt_id(&r.department_id),
             search:        if r.search.is_empty() { None } else { Some(r.search) },
-            req:           PageRequest { page, per_page },
+            req:           PageRequest::new(page, per_page),
         };
         let page_result = self.mediator.query(q).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListEmployeesResponse {
-            items:       page_result.items.into_iter().map(to_employee_message).collect(),
-            total:       page_result.total,
-            page:        page_result.page,
-            per_page:    page_result.per_page,
-            total_pages: page_result.total_pages,
+            total:       page_result.total(),
+            page:        page_result.page(),
+            per_page:    page_result.per_page(),
+            total_pages: page_result.total_pages(),
+            items:       page_result.into_items().into_iter().map(to_employee_message).collect(),
         }))
     }
 

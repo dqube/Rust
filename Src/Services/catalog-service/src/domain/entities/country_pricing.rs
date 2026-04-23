@@ -20,7 +20,7 @@ impl CountryPricing {
         effective_date: DateTime<Utc>,
     ) -> Self {
         Self {
-            id: PricingId(Uuid::new_v4()),
+            id: PricingId::from_uuid(Uuid::new_v4()),
             product_id,
             country_code,
             price,

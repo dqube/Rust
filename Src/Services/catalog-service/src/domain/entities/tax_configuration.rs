@@ -35,13 +35,13 @@ impl TaxConfiguration {
         expiry_date:    Option<DateTime<Utc>>,
     ) -> Result<Self, AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Tax configuration name cannot be empty"));
+            return Err(AppError::validation("name", "Tax configuration name cannot be empty"));
         }
         if code.trim().is_empty() {
-            return Err(AppError::validation("Tax code cannot be empty"));
+            return Err(AppError::validation("tax_code", "Tax code cannot be empty"));
         }
         Ok(Self {
-            id: TaxConfigId(Uuid::new_v4()),
+            id: TaxConfigId::from_uuid(Uuid::new_v4()),
             name,
             code,
             tax_type,
@@ -68,10 +68,10 @@ impl TaxConfiguration {
         expiry_date:    Option<DateTime<Utc>>,
     ) -> Result<(), AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Tax configuration name cannot be empty"));
+            return Err(AppError::validation("name", "Tax configuration name cannot be empty"));
         }
         if code.trim().is_empty() {
-            return Err(AppError::validation("Tax code cannot be empty"));
+            return Err(AppError::validation("tax_code", "Tax code cannot be empty"));
         }
         self.name = name;
         self.code = code;

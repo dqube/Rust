@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use ddd_api::grpc::ToGrpcStatus;
+use ddd_api::grpc::GrpcErrorExt;
 use ddd_application::Mediator;
 use ddd_shared_kernel::PageRequest;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::application::commands::*;
+use crate::application::commands::{PurchaseOrderDetailInput, *};
 use crate::application::queries::*;
 use crate::domain::entities::*;
 use crate::domain::enums::*;
@@ -192,14 +192,14 @@ impl SupplierService for SupplierGrpcService {
         let result = self.mediator.query(ListSuppliers {
             active_only: r.active_only,
             search:      opt_str(&r.search),
-            req:         PageRequest { page, per_page },
+            req:         PageRequest::new(page, per_page),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListSuppliersResponse {
-            items:       result.items.into_iter().map(to_supplier_message).collect(),
-            total:       result.total,
-            page:        result.page,
-            per_page:    result.per_page,
-            total_pages: result.total_pages,
+            total:       result.total(),
+            page:        result.page(),
+            per_page:    result.per_page(),
+            total_pages: result.total_pages(),
+            items:       result.into_items().into_iter().map(to_supplier_message).collect(),
         }))
     }
 
@@ -234,7 +234,7 @@ impl SupplierService for SupplierGrpcService {
     async fn get_supplier(
         &self, req: Request<GetSupplierRequest>,
     ) -> Result<Response<SupplierMessage>, Status> {
-        let id = SupplierId(parse_id(&req.into_inner().id, "supplier_id")?);
+        let id = SupplierId::from_uuid(parse_id(&req.into_inner().id, "supplier_id")?);
         let s = self.mediator.query(GetSupplier { id }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("Supplier {id} not found")))?;
         Ok(Response::new(to_supplier_message(s)))
@@ -245,7 +245,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierMessage>, Status> {
         let r = req.into_inner();
         let cmd = UpdateSupplier {
-            id:                        SupplierId(parse_id(&r.id, "supplier_id")?),
+            id:                        SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
             company_name:              r.company_name,
             tax_identification_number: opt_str(&r.tax_identification_number),
             registration_number:       opt_str(&r.registration_number),
@@ -266,7 +266,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierMessage>, Status> {
         let r = req.into_inner();
         let s = self.mediator.send(ActivateSupplier {
-            id: SupplierId(parse_id(&r.id, "supplier_id")?),
+            id: SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
             updated_by: opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_supplier_message(s)))
@@ -277,7 +277,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierMessage>, Status> {
         let r = req.into_inner();
         let s = self.mediator.send(DeactivateSupplier {
-            id: SupplierId(parse_id(&r.id, "supplier_id")?),
+            id: SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
             updated_by: opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_supplier_message(s)))
@@ -286,7 +286,7 @@ impl SupplierService for SupplierGrpcService {
     async fn delete_supplier(
         &self, req: Request<DeleteSupplierRequest>,
     ) -> Result<Response<Empty>, Status> {
-        let id = SupplierId(parse_id(&req.into_inner().id, "supplier_id")?);
+        let id = SupplierId::from_uuid(parse_id(&req.into_inner().id, "supplier_id")?);
         self.mediator.send(DeleteSupplier { id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(Empty {}))
     }
@@ -296,7 +296,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierMessage>, Status> {
         let r = req.into_inner();
         let s = self.mediator.send(UpdateSupplierStatus {
-            id:         SupplierId(parse_id(&r.id, "supplier_id")?),
+            id:         SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
             status:     SupplierStatus::from_str(&r.status),
             updated_by: opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
@@ -308,7 +308,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierMessage>, Status> {
         let r = req.into_inner();
         let s = self.mediator.send(UpdateOnboardingStatus {
-            id:                SupplierId(parse_id(&r.id, "supplier_id")?),
+            id:                SupplierId::from_uuid(parse_id(&r.id, "supplier_id")?),
             onboarding_status: OnboardingStatus::from_str(&r.onboarding_status),
             updated_by:        opt_str(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
@@ -320,7 +320,7 @@ impl SupplierService for SupplierGrpcService {
     async fn get_supplier_addresses(
         &self, req: Request<GetSupplierAddressesRequest>,
     ) -> Result<Response<GetSupplierAddressesResponse>, Status> {
-        let supplier_id = SupplierId(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
+        let supplier_id = SupplierId::from_uuid(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
         let addrs = self.mediator.query(GetSupplierAddresses { supplier_id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(GetSupplierAddressesResponse {
             items: addrs.into_iter().map(to_address_message).collect(),
@@ -332,7 +332,7 @@ impl SupplierService for SupplierGrpcService {
     async fn get_supplier_contacts(
         &self, req: Request<GetSupplierContactsRequest>,
     ) -> Result<Response<GetSupplierContactsResponse>, Status> {
-        let supplier_id = SupplierId(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
+        let supplier_id = SupplierId::from_uuid(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
         let contacts = self.mediator.query(GetSupplierContacts { supplier_id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(GetSupplierContactsResponse {
             items: contacts.into_iter().map(to_contact_message).collect(),
@@ -344,7 +344,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierContactMessage>, Status> {
         let r = req.into_inner();
         let cmd = CreateSupplierContact {
-            supplier_id: SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_id: SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
             first_name:  r.first_name,
             last_name:   r.last_name,
             email:       opt_str(&r.email),
@@ -363,7 +363,7 @@ impl SupplierService for SupplierGrpcService {
     async fn get_supplier_documents(
         &self, req: Request<GetSupplierDocumentsRequest>,
     ) -> Result<Response<GetSupplierDocumentsResponse>, Status> {
-        let supplier_id = SupplierId(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
+        let supplier_id = SupplierId::from_uuid(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
         let docs = self.mediator.query(GetSupplierDocuments { supplier_id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(GetSupplierDocumentsResponse {
             items: docs.into_iter().map(|(d, url, exp)| to_document_message(d, url, exp)).collect(),
@@ -375,7 +375,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<RequestDocumentUploadUrlResponse>, Status> {
         let r = req.into_inner();
         let cmd = RequestDocumentUploadUrl {
-            supplier_id:   SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_id:   SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
             file_name:     r.file_name,
             content_type:  r.content_type,
             document_type: opt_str(&r.document_type),
@@ -389,7 +389,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierDocumentMessage>, Status> {
         let r = req.into_inner();
         let cmd = ConfirmDocumentUpload {
-            supplier_id:   SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_id:   SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
             object_name:   r.object_name,
             file_name:     r.file_name,
             content_type:  r.content_type,
@@ -405,8 +405,8 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<Empty>, Status> {
         let r = req.into_inner();
         let cmd = DeleteSupplierDocument {
-            supplier_id: SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
-            document_id: DocumentId(parse_id(&r.document_id, "document_id")?),
+            supplier_id: SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
+            document_id: DocumentId::from_uuid(parse_id(&r.document_id, "document_id")?),
         };
         self.mediator.send(cmd).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(Empty {}))
@@ -417,7 +417,7 @@ impl SupplierService for SupplierGrpcService {
     async fn list_supplier_products(
         &self, req: Request<ListSupplierProductsRequest>,
     ) -> Result<Response<ListSupplierProductsResponse>, Status> {
-        let supplier_id = SupplierId(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
+        let supplier_id = SupplierId::from_uuid(parse_id(&req.into_inner().supplier_id, "supplier_id")?);
         let products = self.mediator.query(ListSupplierProducts { supplier_id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListSupplierProductsResponse {
             items: products.into_iter().map(to_product_message).collect(),
@@ -429,7 +429,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<SupplierProductMessage>, Status> {
         let r = req.into_inner();
         let cmd = AddSupplierProduct {
-            supplier_id:        SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_id:        SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
             product_id:         parse_id(&r.product_id, "product_id")?,
             variant_id:         parse_opt_id(&r.variant_id),
             unit_cost:          parse_decimal(&r.unit_cost, "unit_cost")?,
@@ -448,8 +448,8 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<Empty>, Status> {
         let r = req.into_inner();
         let cmd = RemoveSupplierProduct {
-            supplier_id:         SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
-            supplier_product_id: SupplierProductId(parse_id(&r.supplier_product_id, "supplier_product_id")?),
+            supplier_id:         SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_product_id: SupplierProductId::from_uuid(parse_id(&r.supplier_product_id, "supplier_product_id")?),
         };
         self.mediator.send(cmd).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(Empty {}))
@@ -462,7 +462,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<ListPurchaseOrdersResponse>, Status> {
         let r = req.into_inner();
         let orders = self.mediator.query(ListPurchaseOrders {
-            supplier_id: parse_opt_id(&r.supplier_id).map(SupplierId),
+            supplier_id: parse_opt_id(&r.supplier_id).map(SupplierId::from_uuid),
             store_id:    if r.store_id == 0 { None } else { Some(r.store_id) },
             status:      opt_str(&r.status),
             from_date:   parse_opt_datetime(&r.from_date),
@@ -486,11 +486,11 @@ impl SupplierService for SupplierGrpcService {
             });
         }
         let cmd = CreatePurchaseOrder {
-            supplier_id:         SupplierId(parse_id(&r.supplier_id, "supplier_id")?),
+            supplier_id:         SupplierId::from_uuid(parse_id(&r.supplier_id, "supplier_id")?),
             store_id:            r.store_id,
             expected_date:       parse_opt_datetime(&r.expected_date),
-            shipping_address_id: parse_opt_id(&r.shipping_address_id).map(AddressId),
-            contact_person_id:   parse_opt_id(&r.contact_person_id).map(ContactId),
+            shipping_address_id: parse_opt_id(&r.shipping_address_id).map(AddressId::from_uuid),
+            contact_person_id:   parse_opt_id(&r.contact_person_id).map(ContactId::from_uuid),
             created_by:          parse_opt_id(&r.created_by),
             order_details:       details,
         };
@@ -501,7 +501,7 @@ impl SupplierService for SupplierGrpcService {
     async fn get_purchase_order(
         &self, req: Request<GetPurchaseOrderRequest>,
     ) -> Result<Response<PurchaseOrderMessage>, Status> {
-        let id = OrderId(parse_id(&req.into_inner().id, "order_id")?);
+        let id = OrderId::from_uuid(parse_id(&req.into_inner().id, "order_id")?);
         let order = self.mediator.query(GetPurchaseOrder { id }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("PurchaseOrder {id} not found")))?;
         Ok(Response::new(to_order_message(order)))
@@ -512,7 +512,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<PurchaseOrderMessage>, Status> {
         let r = req.into_inner();
         let order = self.mediator.send(SubmitPurchaseOrder {
-            id:         OrderId(parse_id(&r.id, "order_id")?),
+            id:         OrderId::from_uuid(parse_id(&r.id, "order_id")?),
             updated_by: parse_opt_id(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_order_message(order)))
@@ -523,7 +523,7 @@ impl SupplierService for SupplierGrpcService {
     ) -> Result<Response<PurchaseOrderMessage>, Status> {
         let r = req.into_inner();
         let order = self.mediator.send(CancelPurchaseOrder {
-            id:         OrderId(parse_id(&r.id, "order_id")?),
+            id:         OrderId::from_uuid(parse_id(&r.id, "order_id")?),
             updated_by: parse_opt_id(&r.updated_by),
         }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_order_message(order)))

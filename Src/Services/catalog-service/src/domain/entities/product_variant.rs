@@ -39,7 +39,7 @@ impl ProductVariant {
         let attributes = serde_json::from_str(attributes_json)
             .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
         Self {
-            id: ProductVariantId(Uuid::new_v4()),
+            id: ProductVariantId::from_uuid(Uuid::new_v4()),
             product_id,
             sku,
             description,

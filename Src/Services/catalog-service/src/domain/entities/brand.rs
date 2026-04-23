@@ -27,11 +27,11 @@ impl Brand {
         website:     Option<String>,
     ) -> Result<Self, AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Brand name cannot be empty"));
+            return Err(AppError::validation("name", "Brand name cannot be empty"));
         }
         let slug = slugify(&name);
         Ok(Self {
-            id: BrandId(Uuid::new_v4()),
+            id: BrandId::from_uuid(Uuid::new_v4()),
             name,
             description,
             slug: Some(slug),
@@ -52,7 +52,7 @@ impl Brand {
         website:     Option<String>,
     ) -> Result<(), AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Brand name cannot be empty"));
+            return Err(AppError::validation("name", "Brand name cannot be empty"));
         }
         self.name = name;
         self.description = description;

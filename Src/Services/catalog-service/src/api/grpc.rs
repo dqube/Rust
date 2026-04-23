@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ddd_api::grpc::ToGrpcStatus;
+use ddd_api::grpc::GrpcErrorExt;
 use ddd_application::Mediator;
 use ddd_shared_kernel::PageRequest;
 use tonic::{Request, Response, Status};
@@ -185,14 +185,14 @@ impl CatalogService for CatalogGrpcService {
             cost_price:  r.cost_price,
             description: opt_str(&r.description),
             is_taxable:  r.is_taxable,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn get_product(&self, req: Request<GetProductRequest>) -> Result<Response<ProductMessage>, Status> {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
-        let p = self.mediator.query(GetProduct { id: ProductId(id) }).await.to_grpc_status()?
+        let p = self.mediator.query(GetProduct { id: ProductId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("Product {} not found", r.product_id)))?;
         Ok(Response::new(to_product_message(p)))
     }
@@ -201,42 +201,39 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
         let p = self.mediator.send(UpdateProduct {
-            id:          ProductId(id),
+            id:          ProductId::from_uuid(id),
             name:        r.name,
             category_id: r.category_id,
             base_price:  r.base_price,
             cost_price:  r.cost_price,
             is_taxable:  r.is_taxable,
             description: opt_str(&r.description),
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn discontinue_product(&self, req: Request<ProductIdRequest>) -> Result<Response<ProductMessage>, Status> {
         let id = parse_uuid(&req.into_inner().product_id, "product_id")?;
-        let p = self.mediator.send(DiscontinueProduct { id: ProductId(id) }).await.to_grpc_status()?;
+        let p = self.mediator.send(DiscontinueProduct { id: ProductId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn reactivate_product(&self, req: Request<ProductIdRequest>) -> Result<Response<ProductMessage>, Status> {
         let id = parse_uuid(&req.into_inner().product_id, "product_id")?;
-        let p = self.mediator.send(ReactivateProduct { id: ProductId(id) }).await.to_grpc_status()?;
+        let p = self.mediator.send(ReactivateProduct { id: ProductId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn update_product_pricing(&self, req: Request<UpdateProductPricingRequest>) -> Result<Response<ProductMessage>, Status> {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
-        let p = self.mediator.send(UpdateProductPricing { id: ProductId(id), price: r.price }).await.to_grpc_status()?;
+        let p = self.mediator.send(UpdateProductPricing { id: ProductId::from_uuid(id), price: r.price }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn list_products(&self, req: Request<ListProductsRequest>) -> Result<Response<ListProductsResponse>, Status> {
         let r = req.into_inner();
-        let page_req = PageRequest {
-            page:     r.page.max(1) as usize,
-            per_page: r.per_page.max(1) as usize,
-        };
+        let page_req = PageRequest::new(r.page.max(1), r.per_page.max(1));
         let page = self.mediator.query(ListProducts {
             search:      opt_str(&r.search),
             category_id: if r.has_category { Some(r.category_id) } else { None },
@@ -245,13 +242,13 @@ impl CatalogService for CatalogGrpcService {
             sort_by:     opt_str(&r.sort_by),
             sort_desc:   r.sort_desc,
             req:         page_req,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListProductsResponse {
-            items:       page.items.iter().map(to_product_summary).collect(),
-            total:       page.total as u64,
-            total_pages: page.total_pages as u32,
-            page:        page.page as u32,
-            per_page:    page.per_page as u32,
+            items:       page.items().iter().map(to_product_summary).collect(),
+            total:       page.total() as u64,
+            total_pages: page.total_pages() as u32,
+            page:        page.page() as u32,
+            per_page:    page.per_page() as u32,
         }))
     }
 
@@ -259,7 +256,7 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id       = parse_uuid(&r.product_id, "product_id")?;
         let brand_id = if r.brand_id.is_empty() { None } else { Some(parse_uuid(&r.brand_id, "brand_id")?) };
-        let p = self.mediator.send(AssignProductBrand { id: ProductId(id), brand_id }).await.to_grpc_status()?;
+        let p = self.mediator.send(AssignProductBrand { id: ProductId::from_uuid(id), brand_id }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -267,7 +264,7 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let pid = parse_uuid(&r.product_id, "product_id")?;
         let p = self.mediator.send(AddProductVariant {
-            product_id:          ProductId(pid),
+            product_id:          ProductId::from_uuid(pid),
             sku:                 r.sku,
             attributes_json:     r.attributes_json,
             price_override:      if r.has_price_override { Some(r.price_override) } else { None },
@@ -279,7 +276,7 @@ impl CatalogService for CatalogGrpcService {
             width_cm:            if r.has_dimensions { Some(r.width_cm) } else { None },
             height_cm:           if r.has_dimensions { Some(r.height_cm) } else { None },
             depth_cm:            if r.has_dimensions { Some(r.depth_cm) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -288,8 +285,8 @@ impl CatalogService for CatalogGrpcService {
         let pid = parse_uuid(&r.product_id, "product_id")?;
         let vid = parse_uuid(&r.variant_id, "variant_id")?;
         let p = self.mediator.send(UpdateProductVariant {
-            product_id:          ProductId(pid),
-            variant_id:          ProductVariantId(vid),
+            product_id:          ProductId::from_uuid(pid),
+            variant_id:          ProductVariantId::from_uuid(vid),
             sku:                 r.sku,
             attributes_json:     r.attributes_json,
             price_override:      if r.has_price_override { Some(r.price_override) } else { None },
@@ -302,7 +299,7 @@ impl CatalogService for CatalogGrpcService {
             width_cm:            if r.has_dimensions { Some(r.width_cm) } else { None },
             height_cm:           if r.has_dimensions { Some(r.height_cm) } else { None },
             depth_cm:            if r.has_dimensions { Some(r.depth_cm) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -311,9 +308,9 @@ impl CatalogService for CatalogGrpcService {
         let pid = parse_uuid(&r.product_id, "product_id")?;
         let vid = parse_uuid(&r.variant_id, "variant_id")?;
         let p = self.mediator.send(RemoveProductVariant {
-            product_id: ProductId(pid),
-            variant_id: ProductVariantId(vid),
-        }).await.to_grpc_status()?;
+            product_id: ProductId::from_uuid(pid),
+            variant_id: ProductVariantId::from_uuid(vid),
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -322,9 +319,9 @@ impl CatalogService for CatalogGrpcService {
         let pid = parse_uuid(&r.product_id, "product_id")?;
         let vid = parse_uuid(&r.variant_id, "variant_id")?;
         let p = self.mediator.send(SetDefaultVariant {
-            product_id: ProductId(pid),
-            variant_id: ProductVariantId(vid),
-        }).await.to_grpc_status()?;
+            product_id: ProductId::from_uuid(pid),
+            variant_id: ProductVariantId::from_uuid(vid),
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -332,12 +329,12 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
         let p = self.mediator.send(SetProductDimensions {
-            id:          ProductId(id),
+            id:          ProductId::from_uuid(id),
             weight_grams: if r.has_weight { Some(r.weight_grams) } else { None },
             width_cm:    if r.has_dims { Some(r.width_cm) } else { None },
             height_cm:   if r.has_dims { Some(r.height_cm) } else { None },
             depth_cm:    if r.has_dims { Some(r.depth_cm) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -346,14 +343,14 @@ impl CatalogService for CatalogGrpcService {
         let id = parse_uuid(&r.product_id, "product_id")?;
         let specs: serde_json::Value = serde_json::from_str(&r.specifications_json)
             .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-        let p = self.mediator.send(SetProductSpecifications { id: ProductId(id), specs }).await.to_grpc_status()?;
+        let p = self.mediator.send(SetProductSpecifications { id: ProductId::from_uuid(id), specs }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
     async fn set_product_tags(&self, req: Request<SetProductTagsRequest>) -> Result<Response<ProductMessage>, Status> {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
-        let p = self.mediator.send(SetProductTags { id: ProductId(id), tags: r.tags }).await.to_grpc_status()?;
+        let p = self.mediator.send(SetProductTags { id: ProductId::from_uuid(id), tags: r.tags }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -361,9 +358,9 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
         let p = self.mediator.send(SetProductTaxConfigurations {
-            id: ProductId(id),
+            id: ProductId::from_uuid(id),
             tax_config_ids: r.tax_config_ids,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -371,13 +368,13 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
         let (url, object_name, expires_at) = self.mediator.send(RequestProductImageUploadUrl {
-            product_id:   ProductId(id),
+            product_id:   ProductId::from_uuid(id),
             file_name:    r.file_name,
             content_type: r.content_type,
             is_main:      r.is_main,
             sort_order:   r.sort_order,
             alt_text:     opt_str(&r.alt_text),
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(RequestProductImageUploadUrlResponse { upload_url: url, object_name, expires_at }))
     }
 
@@ -385,14 +382,14 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.product_id, "product_id")?;
         let p = self.mediator.send(ConfirmProductImageUpload {
-            product_id:   ProductId(id),
+            product_id:   ProductId::from_uuid(id),
             object_name:  r.object_name,
             file_name:    r.file_name,
             content_type: r.content_type,
             is_main:      r.is_main,
             sort_order:   r.sort_order,
             alt_text:     opt_str(&r.alt_text),
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -401,9 +398,9 @@ impl CatalogService for CatalogGrpcService {
         let pid = parse_uuid(&r.product_id, "product_id")?;
         let iid = parse_uuid(&r.image_id, "image_id")?;
         let p = self.mediator.send(DeleteProductImage {
-            product_id: ProductId(pid),
-            image_id:   ProductImageId(iid),
-        }).await.to_grpc_status()?;
+            product_id: ProductId::from_uuid(pid),
+            image_id:   ProductImageId::from_uuid(iid),
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_product_message(p)))
     }
 
@@ -415,13 +412,13 @@ impl CatalogService for CatalogGrpcService {
             name:               r.name,
             description:        opt_str(&r.description),
             parent_category_id: if r.has_parent { Some(r.parent_category_id) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_category_message(c)))
     }
 
     async fn get_category(&self, req: Request<GetCategoryRequest>) -> Result<Response<CategoryMessage>, Status> {
         let id = req.into_inner().category_id;
-        let c = self.mediator.query(GetCategory { id: CategoryId(id) }).await.to_grpc_status()?
+        let c = self.mediator.query(GetCategory { id: CategoryId(id) }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("Category {id} not found")))?;
         Ok(Response::new(to_category_message(c)))
     }
@@ -430,7 +427,7 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let cats = self.mediator.query(ListCategories {
             parent_id: if r.has_parent { Some(r.parent_category_id) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListCategoriesResponse {
             categories: cats.into_iter().map(to_category_message).collect(),
         }))
@@ -443,13 +440,13 @@ impl CatalogService for CatalogGrpcService {
             name:               r.name,
             description:        opt_str(&r.description),
             parent_category_id: if r.has_parent { Some(r.parent_category_id) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_category_message(c)))
     }
 
     async fn delete_category(&self, req: Request<DeleteCategoryRequest>) -> Result<Response<Empty>, Status> {
         let id = req.into_inner().category_id;
-        self.mediator.send(DeleteCategory { id: CategoryId(id) }).await.to_grpc_status()?;
+        self.mediator.send(DeleteCategory { id: CategoryId(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(Empty {}))
     }
 
@@ -459,7 +456,7 @@ impl CatalogService for CatalogGrpcService {
             category_id:  CategoryId(r.category_id),
             file_name:    r.file_name,
             content_type: r.content_type,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(RequestCategoryImageUploadUrlResponse { upload_url: url, object_name, expires_at }))
     }
 
@@ -471,7 +468,7 @@ impl CatalogService for CatalogGrpcService {
             category_id: CategoryId(r.category_id),
             object_name: r.object_name.clone(),
             public_url:  r.object_name,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_category_message(c)))
     }
 
@@ -483,34 +480,31 @@ impl CatalogService for CatalogGrpcService {
             name:        r.name,
             description: opt_str(&r.description),
             website:     opt_str(&r.website),
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_brand_message(b)))
     }
 
     async fn get_brand(&self, req: Request<GetBrandRequest>) -> Result<Response<BrandMessage>, Status> {
         let id = parse_uuid(&req.into_inner().brand_id, "brand_id")?;
-        let b = self.mediator.query(GetBrand { id: BrandId(id) }).await.to_grpc_status()?
+        let b = self.mediator.query(GetBrand { id: BrandId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("Brand {id} not found")))?;
         Ok(Response::new(to_brand_message(b)))
     }
 
     async fn list_brands(&self, req: Request<ListBrandsRequest>) -> Result<Response<ListBrandsResponse>, Status> {
         let r = req.into_inner();
-        let page_req = PageRequest {
-            page:     r.page.max(1) as usize,
-            per_page: r.per_page.max(1) as usize,
-        };
+        let page_req = PageRequest::new(r.page.max(1), r.per_page.max(1));
         let page = self.mediator.query(ListBrands {
             search:      opt_str(&r.search),
             active_only: r.active_only,
             req:         page_req,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListBrandsResponse {
-            items:       page.items.into_iter().map(to_brand_message).collect(),
-            total:       page.total as u64,
-            total_pages: page.total_pages as u32,
-            page:        page.page as u32,
-            per_page:    page.per_page as u32,
+            total:       page.total() as u64,
+            total_pages: page.total_pages() as u32,
+            page:        page.page() as u32,
+            per_page:    page.per_page() as u32,
+            items:       page.into_items().into_iter().map(to_brand_message).collect(),
         }))
     }
 
@@ -518,23 +512,23 @@ impl CatalogService for CatalogGrpcService {
         let r = req.into_inner();
         let id = parse_uuid(&r.brand_id, "brand_id")?;
         let b = self.mediator.send(UpdateBrand {
-            id:          BrandId(id),
+            id:          BrandId::from_uuid(id),
             name:        r.name,
             description: opt_str(&r.description),
             website:     opt_str(&r.website),
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_brand_message(b)))
     }
 
     async fn activate_brand(&self, req: Request<BrandIdRequest>) -> Result<Response<BrandMessage>, Status> {
         let id = parse_uuid(&req.into_inner().brand_id, "brand_id")?;
-        let b = self.mediator.send(ActivateBrand { id: BrandId(id) }).await.to_grpc_status()?;
+        let b = self.mediator.send(ActivateBrand { id: BrandId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_brand_message(b)))
     }
 
     async fn deactivate_brand(&self, req: Request<BrandIdRequest>) -> Result<Response<BrandMessage>, Status> {
         let id = parse_uuid(&req.into_inner().brand_id, "brand_id")?;
-        let b = self.mediator.send(DeactivateBrand { id: BrandId(id) }).await.to_grpc_status()?;
+        let b = self.mediator.send(DeactivateBrand { id: BrandId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_brand_message(b)))
     }
 
@@ -553,13 +547,13 @@ impl CatalogService for CatalogGrpcService {
             category_id:    if r.has_category { Some(r.category_id) } else { None },
             effective_date: effective,
             expiry_date:    expiry,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_tax_message(tc)))
     }
 
     async fn get_tax_configuration(&self, req: Request<TaxConfigIdRequest>) -> Result<Response<TaxConfigMessage>, Status> {
         let id = parse_uuid(&req.into_inner().tax_config_id, "tax_config_id")?;
-        let tc = self.mediator.query(GetTaxConfig { id: TaxConfigId(id) }).await.to_grpc_status()?
+        let tc = self.mediator.query(GetTaxConfig { id: TaxConfigId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?
             .ok_or_else(|| Status::not_found(format!("TaxConfig {id} not found")))?;
         Ok(Response::new(to_tax_message(tc)))
     }
@@ -570,7 +564,7 @@ impl CatalogService for CatalogGrpcService {
             location_id: if r.has_location { Some(r.location_id) } else { None },
             tax_type:    if r.has_tax_type { opt_str(&r.tax_type) } else { None },
             active_only: r.active_only,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListTaxConfigurationsResponse {
             tax_configurations: tcs.into_iter().map(to_tax_message).collect(),
         }))
@@ -582,32 +576,32 @@ impl CatalogService for CatalogGrpcService {
         let effective = parse_datetime(&r.effective_date, "effective_date")?;
         let expiry  = if r.has_expiry { opt_datetime(&r.expiry_date) } else { None };
         let tc = self.mediator.send(UpdateTaxConfiguration {
-            id:             TaxConfigId(id),
+            id:             TaxConfigId::from_uuid(id),
             name:           r.name,
             code:           r.code,
             tax_type:       r.tax_type,
             tax_rate:       r.tax_rate,
             effective_date: effective,
             expiry_date:    expiry,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_tax_message(tc)))
     }
 
     async fn delete_tax_configuration(&self, req: Request<TaxConfigIdRequest>) -> Result<Response<Empty>, Status> {
         let id = parse_uuid(&req.into_inner().tax_config_id, "tax_config_id")?;
-        self.mediator.send(DeleteTaxConfiguration { id: TaxConfigId(id) }).await.to_grpc_status()?;
+        self.mediator.send(DeleteTaxConfiguration { id: TaxConfigId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(Empty {}))
     }
 
     async fn activate_tax_configuration(&self, req: Request<TaxConfigIdRequest>) -> Result<Response<TaxConfigMessage>, Status> {
         let id = parse_uuid(&req.into_inner().tax_config_id, "tax_config_id")?;
-        let tc = self.mediator.send(ActivateTaxConfiguration { id: TaxConfigId(id) }).await.to_grpc_status()?;
+        let tc = self.mediator.send(ActivateTaxConfiguration { id: TaxConfigId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_tax_message(tc)))
     }
 
     async fn deactivate_tax_configuration(&self, req: Request<TaxConfigIdRequest>) -> Result<Response<TaxConfigMessage>, Status> {
         let id = parse_uuid(&req.into_inner().tax_config_id, "tax_config_id")?;
-        let tc = self.mediator.send(DeactivateTaxConfiguration { id: TaxConfigId(id) }).await.to_grpc_status()?;
+        let tc = self.mediator.send(DeactivateTaxConfiguration { id: TaxConfigId::from_uuid(id) }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(to_tax_message(tc)))
     }
 
@@ -616,7 +610,7 @@ impl CatalogService for CatalogGrpcService {
         let tcs = self.mediator.query(GetApplicableTaxConfigs {
             location_id: r.location_id,
             category_id: if r.has_category { Some(r.category_id) } else { None },
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListTaxConfigurationsResponse {
             tax_configurations: tcs.into_iter().map(to_tax_message).collect(),
         }))
@@ -628,7 +622,7 @@ impl CatalogService for CatalogGrpcService {
             location_id: r.location_id,
             category_id: if r.has_category { Some(r.category_id) } else { None },
             amount:      r.amount,
-        }).await.to_grpc_status()?;
+        }).await.map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(CalculateTaxResponse {
             original_amount: r.amount,
             tax_amount,

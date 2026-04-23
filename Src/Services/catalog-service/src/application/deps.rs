@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ddd_shared_kernel::storage::BlobStorage;
+use ddd_shared_kernel::BlobStorage;
 
 use crate::domain::repositories::*;
 

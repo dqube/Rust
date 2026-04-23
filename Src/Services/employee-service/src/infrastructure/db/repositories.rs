@@ -168,8 +168,8 @@ impl EmployeeRepository for PgEmployeeRepository {
             drop(pat);
         }
         let total = q.clone().count(&*self.0).await.map_err(db_err)? as u64;
-        let page = req.page.max(1);
-        let per_page = req.per_page.max(1);
+        let page = req.page().max(1);
+        let per_page = req.per_page().max(1);
         let offset = ((page - 1) * per_page) as u64;
         let items = q
             .order_by_asc(employee::Column::EmployeeCode)

@@ -58,17 +58,17 @@ impl Product {
         is_taxable:  bool,
     ) -> Result<Self, AppError> {
         if sku.trim().is_empty() {
-            return Err(AppError::validation("SKU cannot be empty"));
+            return Err(AppError::validation("sku", "SKU cannot be empty"));
         }
         if name.trim().is_empty() {
-            return Err(AppError::validation("Product name cannot be empty"));
+            return Err(AppError::validation("name", "Product name cannot be empty"));
         }
         if base_price < 0.0 {
-            return Err(AppError::validation("Base price cannot be negative"));
+            return Err(AppError::validation("base_price", "Base price cannot be negative"));
         }
         let slug = slugify(&name);
         Ok(Self {
-            id: ProductId(Uuid::new_v4()),
+            id: ProductId::from_uuid(Uuid::new_v4()),
             sku,
             name,
             description,
@@ -114,7 +114,7 @@ impl Product {
         description: Option<String>,
     ) -> Result<(), AppError> {
         if name.trim().is_empty() {
-            return Err(AppError::validation("Product name cannot be empty"));
+            return Err(AppError::validation("name", "Product name cannot be empty"));
         }
         self.name = name;
         self.category_id = category_id;
@@ -197,7 +197,7 @@ impl Product {
 
     pub fn remove_image(&mut self, image_id: ProductImageId) -> Result<(), AppError> {
         let pos = self.images.iter().position(|i| i.id == image_id)
-            .ok_or_else(|| AppError::not_found(format!("Image {image_id} not found")))?;
+            .ok_or_else(|| AppError::not_found("image", image_id.to_string()))?;
         self.images.remove(pos);
         self.updated_at = Some(Utc::now());
         Ok(())
@@ -226,7 +226,7 @@ impl Product {
     ) -> Result<(), AppError> {
         let v = self.variants.iter_mut()
             .find(|v| v.id == variant_id)
-            .ok_or_else(|| AppError::not_found(format!("Variant {variant_id} not found")))?;
+            .ok_or_else(|| AppError::not_found("variant", variant_id.to_string()))?;
         v.sku = sku;
         v.attributes = serde_json::from_str(attributes_json)
             .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
@@ -246,7 +246,7 @@ impl Product {
 
     pub fn remove_variant(&mut self, variant_id: ProductVariantId) -> Result<(), AppError> {
         let pos = self.variants.iter().position(|v| v.id == variant_id)
-            .ok_or_else(|| AppError::not_found(format!("Variant {variant_id} not found")))?;
+            .ok_or_else(|| AppError::not_found("variant", variant_id.to_string()))?;
         self.variants.remove(pos);
         self.updated_at = Some(Utc::now());
         Ok(())
@@ -255,7 +255,7 @@ impl Product {
     pub fn set_default_variant(&mut self, variant_id: ProductVariantId) -> Result<(), AppError> {
         let exists = self.variants.iter().any(|v| v.id == variant_id);
         if !exists {
-            return Err(AppError::not_found(format!("Variant {variant_id} not found")));
+            return Err(AppError::not_found("variant", variant_id.to_string()));
         }
         for v in &mut self.variants {
             v.is_default = v.id == variant_id;

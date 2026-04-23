@@ -2,6 +2,7 @@
 
 pub mod auth;
 pub mod batch_orders;
+pub mod catalog;
 pub mod catalog_summary;
 pub mod customers;
 pub mod employees;

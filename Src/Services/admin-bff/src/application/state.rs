@@ -10,6 +10,7 @@ use crate::infrastructure::clients::order::OrderClient;
 use crate::infrastructure::clients::product::ProductClient;
 use crate::infrastructure::clients::shared::SharedClient;
 use crate::infrastructure::clients::supplier::SupplierClient;
+use crate::infrastructure::clients::catalog::CatalogClient;
 
 /// Unified shared state for all handlers.
 ///
@@ -28,6 +29,7 @@ pub struct AppState {
     pub customer_client: Arc<CustomerClient>,
     pub employee_client: Arc<EmployeeClient>,
     pub supplier_client: Arc<SupplierClient>,
+    pub catalog_client:  Arc<CatalogClient>,
     pub jwt_validator: Option<Arc<JwtValidator<StandardClaims>>>,
     pub pool: Arc<GrpcClientPool>,
     /// Optional read-through cache. `None` when `REDIS_URL` is unset.
@@ -62,6 +64,9 @@ impl AppState {
         let supplier_channel = pool
             .channel("supplier")
             .expect("supplier channel registered");
+        let catalog_channel = pool
+            .channel("catalog")
+            .expect("catalog channel registered");
 
         Self {
             config: Arc::new(config),
@@ -72,6 +77,7 @@ impl AppState {
             customer_client: Arc::new(CustomerClient::new(customer_channel)),
             employee_client: Arc::new(EmployeeClient::new(employee_channel)),
             supplier_client: Arc::new(SupplierClient::new(supplier_channel)),
+            catalog_client:  Arc::new(CatalogClient::new(catalog_channel)),
             jwt_validator,
             pool: Arc::new(pool),
             cache,

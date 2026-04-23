@@ -80,6 +80,7 @@ pub struct ServiceUrls {
     pub customer_service: String,
     pub employee_service: String,
     pub supplier_service: String,
+    pub catalog_service:  String,
 }
 
 impl AdminBffConfig {
@@ -133,6 +134,7 @@ impl AdminBffConfig {
                 customer_service: "http://localhost:50055".into(),
                 employee_service: "http://localhost:50056".into(),
                 supplier_service: "http://localhost:50057".into(),
+                catalog_service:  "http://localhost:50058".into(),
             },
             auth: AuthConfig {
                 secret: String::new(),
@@ -180,6 +182,11 @@ impl Validate for AdminBffConfig {
         validate_http_url(
             "services.supplier_service",
             &self.services.supplier_service,
+            report,
+        );
+        validate_http_url(
+            "services.catalog_service",
+            &self.services.catalog_service,
             report,
         );
 
@@ -244,6 +251,7 @@ struct ServicesFile {
     customer_service: Option<String>,
     employee_service: Option<String>,
     supplier_service: Option<String>,
+    catalog_service:  Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -345,6 +353,9 @@ fn overlay_file(cfg: &mut AdminBffConfig, f: ConfigFile) {
     if let Some(v) = f.services.supplier_service {
         cfg.services.supplier_service = v;
     }
+    if let Some(v) = f.services.catalog_service {
+        cfg.services.catalog_service = v;
+    }
     if let Some(v) = f.resilience.timeout_ms {
         cfg.bff.resilience.timeout = Duration::from_millis(v);
     }
@@ -407,6 +418,7 @@ fn apply_env_layer(cfg: &mut AdminBffConfig, report: &mut Report) {
     apply_str("CUSTOMER_SERVICE_URL", |v| cfg.services.customer_service = v);
     apply_str("EMPLOYEE_SERVICE_URL", |v| cfg.services.employee_service = v);
     apply_str("SUPPLIER_SERVICE_URL", |v| cfg.services.supplier_service = v);
+    apply_str("CATALOG_SERVICE_URL",  |v| cfg.services.catalog_service = v);
 
     apply_parse::<u64>("GRPC_TIMEOUT_MS", report, |v| {
         cfg.bff.resilience.timeout = Duration::from_millis(v)

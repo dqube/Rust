@@ -21,6 +21,7 @@ services:
   customer_service: http://localhost:50055   # env: CUSTOMER_SERVICE_URL
   employee_service: http://localhost:50056   # env: EMPLOYEE_SERVICE_URL
   supplier_service: http://localhost:50057   # env: SUPPLIER_SERVICE_URL
+  catalog_service:  http://localhost:50058   # env: CATALOG_SERVICE_URL
 
 resilience:
   timeout_ms:     5000    # env: GRPC_TIMEOUT_MS

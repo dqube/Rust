@@ -38,3 +38,7 @@ pub mod proto_employee {
 pub mod proto_supplier {
     tonic::include_proto!("supplier.v1");
 }
+
+pub mod proto_catalog {
+    tonic::include_proto!("catalog.v1");
+}

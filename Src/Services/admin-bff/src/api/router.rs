@@ -13,6 +13,7 @@ use crate::api::openapi::AdminApiDoc;
 use crate::api::openapi_routes::API_ROUTES;
 use crate::api::rest::auth;
 use crate::api::rest::batch_orders::batch_get_orders;
+use crate::api::rest::catalog;
 use crate::api::rest::catalog_summary::get_catalog_summary;
 use crate::api::rest::customers;
 use crate::api::rest::employees;
@@ -143,6 +144,43 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/employees/designations", post(employees::create_designation).get(employees::list_designations))
         .route("/admin/employees/designations/{id}", get(employees::get_designation).put(employees::update_designation));
 
+    // Catalog — products, categories, brands, tax configurations (REST → gRPC pass-through)
+    let catalog_routes = Router::new()
+        // Products
+        .route("/admin/catalog/products", post(catalog::create_product).get(catalog::list_products))
+        .route("/admin/catalog/products/{id}", get(catalog::get_product).put(catalog::update_product))
+        .route("/admin/catalog/products/{id}/discontinue", put(catalog::discontinue_product))
+        .route("/admin/catalog/products/{id}/reactivate", put(catalog::reactivate_product))
+        .route("/admin/catalog/products/{id}/pricing", put(catalog::update_product_pricing))
+        .route("/admin/catalog/products/{id}/brand", put(catalog::assign_product_brand))
+        .route("/admin/catalog/products/{id}/dimensions", put(catalog::set_product_dimensions))
+        .route("/admin/catalog/products/{id}/specifications", put(catalog::set_product_specifications))
+        .route("/admin/catalog/products/{id}/tags", put(catalog::set_product_tags))
+        .route("/admin/catalog/products/{id}/tax-configurations", put(catalog::set_product_tax_configurations))
+        .route("/admin/catalog/products/{id}/variants", post(catalog::add_product_variant))
+        .route("/admin/catalog/products/{id}/variants/{variant_id}", put(catalog::update_product_variant).delete(catalog::remove_product_variant))
+        .route("/admin/catalog/products/{id}/variants/{variant_id}/set-default", put(catalog::set_default_variant))
+        .route("/admin/catalog/products/{id}/image-upload-url", post(catalog::request_product_image_upload_url))
+        .route("/admin/catalog/products/{id}/confirm-image", post(catalog::confirm_product_image_upload))
+        .route("/admin/catalog/products/{id}/images/{image_id}", delete(catalog::delete_product_image))
+        // Categories
+        .route("/admin/catalog/categories", post(catalog::create_category).get(catalog::list_categories))
+        .route("/admin/catalog/categories/{id}", get(catalog::get_category).put(catalog::update_category).delete(catalog::delete_category))
+        .route("/admin/catalog/categories/{id}/image-upload-url", post(catalog::request_category_image_upload_url))
+        .route("/admin/catalog/categories/{id}/confirm-image", post(catalog::confirm_category_image_upload))
+        // Brands
+        .route("/admin/catalog/brands", post(catalog::create_brand).get(catalog::list_brands))
+        .route("/admin/catalog/brands/{id}", get(catalog::get_brand).put(catalog::update_brand))
+        .route("/admin/catalog/brands/{id}/activate", put(catalog::activate_brand))
+        .route("/admin/catalog/brands/{id}/deactivate", put(catalog::deactivate_brand))
+        // Tax configurations
+        .route("/admin/catalog/tax-configurations", post(catalog::create_tax_configuration).get(catalog::list_tax_configurations))
+        .route("/admin/catalog/tax-configurations/{id}", get(catalog::get_tax_configuration).put(catalog::update_tax_configuration).delete(catalog::delete_tax_configuration))
+        .route("/admin/catalog/tax-configurations/{id}/activate", put(catalog::activate_tax_configuration))
+        .route("/admin/catalog/tax-configurations/{id}/deactivate", put(catalog::deactivate_tax_configuration))
+        .route("/admin/catalog/tax-configurations/applicable", get(catalog::get_applicable_tax_configurations))
+        .route("/admin/catalog/tax-configurations/calculate", post(catalog::calculate_tax));
+
     // Supplier CRUD, addresses, contacts, documents, products, purchase orders
     let supplier_routes = Router::new()
         // Suppliers
@@ -207,6 +245,7 @@ pub async fn build_router(state: AppState) -> Router {
         .merge(customer_routes)
         .merge(employee_routes)
         .merge(supplier_routes)
+        .merge(catalog_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

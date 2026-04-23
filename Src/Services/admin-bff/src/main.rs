@@ -76,6 +76,7 @@ async fn main() {
             ("customer", config.services.customer_service.as_str()),
             ("employee", config.services.employee_service.as_str()),
             ("supplier", config.services.supplier_service.as_str()),
+            ("catalog",  config.services.catalog_service.as_str()),
         ],
         &config.bff.resilience,
     )
@@ -84,7 +85,7 @@ async fn main() {
     // Log the ResilientChannel metadata so operators can verify resilience
     // settings at startup without reading env vars — proves the knobs
     // configured in BffConfig flow through to every upstream.
-    for svc in ["product", "order", "shared", "auth", "customer", "employee", "supplier"] {
+    for svc in ["product", "order", "shared", "auth", "customer", "employee", "supplier", "catalog"] {
         if let Ok(rc) = pool.get(svc) {
             tracing::info!(
                 service = svc,

@@ -110,7 +110,7 @@ fn to_wishlist_message(i: &WishlistItem) -> WishlistItemMessage {
         product_id: i.product_id.to_string(),
         product_name: i.product_name.clone(),
         base_price: i.base_price,
-        added_at: i.added_at.to_rfc3339(),
+        added_at: i.created_at.to_rfc3339(),
     }
 }
 

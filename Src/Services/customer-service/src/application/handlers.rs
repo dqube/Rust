@@ -712,7 +712,7 @@ impl CommandHandler<AddToWishlist> for AddToWishlistHandler {
         let result = WishlistItemAddedResult {
             id: item.id.to_string(),
             product_id: item.product_id,
-            added_at: item.added_at,
+            added_at: item.created_at,
         };
         self.wishlist_repo.save(&item).await?;
         let _ = item.drain_events();

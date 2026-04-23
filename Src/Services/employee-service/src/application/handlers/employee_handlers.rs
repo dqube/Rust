@@ -9,6 +9,7 @@ use crate::application::commands::*;
 use crate::application::deps::AppDeps;
 use crate::application::queries::*;
 use crate::domain::entities::Employee;
+use crate::domain::ids::EmployeeId;
 use crate::domain::repositories::EmployeeRepository;
 
 // ── CreateEmployee ────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ pub struct UpdateEmployeeHandler {
 #[async_trait]
 impl CommandHandler<UpdateEmployee> for UpdateEmployeeHandler {
     async fn handle(&self, cmd: UpdateEmployee) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.id.to_string()))?;
         emp.update(
             cmd.first_name, cmd.last_name, cmd.middle_name,
@@ -78,7 +79,7 @@ pub struct TerminateEmployeeHandler {
 #[async_trait]
 impl CommandHandler<TerminateEmployee> for TerminateEmployeeHandler {
     async fn handle(&self, cmd: TerminateEmployee) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.id.to_string()))?;
         emp.terminate(cmd.date_of_leaving);
         self.repo.save(&emp).await?;
@@ -99,7 +100,7 @@ pub struct ReactivateEmployeeHandler {
 #[async_trait]
 impl CommandHandler<ReactivateEmployee> for ReactivateEmployeeHandler {
     async fn handle(&self, cmd: ReactivateEmployee) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.id.to_string()))?;
         emp.reactivate();
         self.repo.save(&emp).await?;
@@ -120,7 +121,7 @@ pub struct AssignEmployeeToStoreHandler {
 #[async_trait]
 impl CommandHandler<AssignEmployeeToStore> for AssignEmployeeToStoreHandler {
     async fn handle(&self, cmd: AssignEmployeeToStore) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.id.to_string()))?;
         emp.assign_store(cmd.store_id);
         self.repo.save(&emp).await?;
@@ -144,7 +145,7 @@ pub struct RequestAvatarUploadUrlHandler {
 #[async_trait]
 impl CommandHandler<RequestAvatarUploadUrl> for RequestAvatarUploadUrlHandler {
     async fn handle(&self, cmd: RequestAvatarUploadUrl) -> AppResult<(String, String, String)> {
-        self.repo.find_by_id(cmd.employee_id).await?
+        self.repo.find_by_id(EmployeeId::from_uuid(cmd.employee_id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.employee_id.to_string()))?;
         let key = format!("employees/{}/avatar/{}", cmd.employee_id, uuid::Uuid::new_v4());
         let presigned = self.blob_storage
@@ -173,7 +174,7 @@ pub struct ConfirmAvatarUploadHandler {
 #[async_trait]
 impl CommandHandler<ConfirmAvatarUpload> for ConfirmAvatarUploadHandler {
     async fn handle(&self, cmd: ConfirmAvatarUpload) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.employee_id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.employee_id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.employee_id.to_string()))?;
         emp.set_avatar(cmd.object_name);
         self.repo.save(&emp).await?;
@@ -194,7 +195,7 @@ pub struct DeleteAvatarHandler {
 #[async_trait]
 impl CommandHandler<DeleteAvatar> for DeleteAvatarHandler {
     async fn handle(&self, cmd: DeleteAvatar) -> AppResult<Employee> {
-        let mut emp = self.repo.find_by_id(cmd.employee_id).await?
+        let mut emp = self.repo.find_by_id(EmployeeId::from_uuid(cmd.employee_id)).await?
             .ok_or_else(|| AppError::not_found("Employee", cmd.employee_id.to_string()))?;
         emp.clear_avatar();
         self.repo.save(&emp).await?;
@@ -215,7 +216,7 @@ pub struct GetEmployeeHandler {
 #[async_trait]
 impl QueryHandler<GetEmployee> for GetEmployeeHandler {
     async fn handle(&self, q: GetEmployee) -> AppResult<Option<Employee>> {
-        self.repo.find_by_id(q.id).await
+        self.repo.find_by_id(EmployeeId::from_uuid(q.id)).await
     }
 }
 
@@ -291,7 +292,7 @@ pub struct GetAvatarUrlHandler {
 #[async_trait]
 impl QueryHandler<GetAvatarUrl> for GetAvatarUrlHandler {
     async fn handle(&self, q: GetAvatarUrl) -> AppResult<(String, String)> {
-        let emp = self.repo.find_by_id(q.employee_id).await?
+        let emp = self.repo.find_by_id(EmployeeId::from_uuid(q.employee_id)).await?
             .ok_or_else(|| AppError::not_found("Employee", q.employee_id.to_string()))?;
         let key = emp.avatar_object_name
             .ok_or_else(|| AppError::not_found("Avatar", q.employee_id.to_string()))?;

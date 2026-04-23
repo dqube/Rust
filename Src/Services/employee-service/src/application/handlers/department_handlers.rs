@@ -8,6 +8,7 @@ use crate::application::commands::*;
 use crate::application::deps::AppDeps;
 use crate::application::queries::*;
 use crate::domain::entities::Department;
+use crate::domain::ids::DepartmentId;
 use crate::domain::repositories::DepartmentRepository;
 
 // ── CreateDepartment ──────────────────────────────────────────────────────────
@@ -48,11 +49,11 @@ pub struct UpdateDepartmentHandler {
 #[async_trait]
 impl CommandHandler<UpdateDepartment> for UpdateDepartmentHandler {
     async fn handle(&self, cmd: UpdateDepartment) -> AppResult<Department> {
-        let mut dept = self.repo.find_by_id(cmd.id).await?
+        let mut dept = self.repo.find_by_id(DepartmentId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Department", cmd.id.to_string()))?;
         dept.department_name = cmd.department_name;
         dept.department_code = cmd.department_code;
-        dept.updated_at      = Some(chrono::Utc::now());
+        dept.updated_at      = chrono::Utc::now();
         self.repo.save(&dept).await?;
         Ok(dept)
     }
@@ -71,7 +72,7 @@ pub struct GetDepartmentHandler {
 #[async_trait]
 impl QueryHandler<GetDepartment> for GetDepartmentHandler {
     async fn handle(&self, q: GetDepartment) -> AppResult<Option<Department>> {
-        self.repo.find_by_id(q.id).await
+        self.repo.find_by_id(DepartmentId::from_uuid(q.id)).await
     }
 }
 

@@ -86,7 +86,7 @@ fn to_employee_message(e: Employee) -> EmployeeMessage {
         avatar_object_name:  e.avatar_object_name.unwrap_or_default(),
         current_store_id:    e.current_store_id.unwrap_or(0),
         created_at:          e.created_at.to_rfc3339(),
-        updated_at:          e.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:          e.updated_at.to_rfc3339(),
     }
 }
 
@@ -99,7 +99,7 @@ fn to_department_message(d: Department) -> DepartmentMessage {
         head_of_department_id: d.head_of_department_id.map(|u| u.to_string()).unwrap_or_default(),
         is_active:             d.is_active,
         created_at:            d.created_at.to_rfc3339(),
-        updated_at:            d.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:            d.updated_at.to_rfc3339(),
     }
 }
 
@@ -110,7 +110,7 @@ fn to_designation_message(d: Designation) -> DesignationMessage {
         level:            d.level.unwrap_or(0),
         is_active:        d.is_active,
         created_at:       d.created_at.to_rfc3339(),
-        updated_at:       d.updated_at.map(|d| d.to_rfc3339()).unwrap_or_default(),
+        updated_at:       d.updated_at.to_rfc3339(),
     }
 }
 

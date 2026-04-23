@@ -134,14 +134,17 @@ fn model_to_profile(m: profile::Model) -> AppResult<CustomerProfile> {
 fn model_to_wishlist_item(m: wishlist_item::Model) -> WishlistItem {
     use sea_orm::prelude::Decimal;
     let base_price = <f64 as TryFrom<Decimal>>::try_from(m.base_price).unwrap_or(0.0);
+    let added_at = to_utc(m.added_at);
     WishlistItem {
         id: WishlistItemId::from_uuid(m.id),
+        version: 0,
+        created_at: added_at,
+        updated_at: added_at,
+        domain_events: Vec::new(),
         customer_id: CustomerId::from_uuid(m.customer_id),
         product_id: m.product_id,
         product_name: m.product_name,
         base_price,
-        added_at: to_utc(m.added_at),
-        domain_events: Vec::new(),
     }
 }
 
@@ -293,7 +296,7 @@ impl CustomerRepository for PgCustomerRepository {
             preferred_address_type: Set(c.preferred_address_type),
             created_at: Set(from_utc(c.created_at)),
             created_by: Set(c.created_by.clone()),
-            updated_at: Set(opt_from_utc(c.updated_at)),
+            updated_at: Set(Some(from_utc(c.updated_at))),
             updated_by: Set(c.updated_by.clone()),
         };
         customer::Entity::insert(active)
@@ -515,7 +518,7 @@ impl CustomerProfileRepository for PgCustomerProfileRepository {
             avatar_object_name: Set(p.avatar_object_name.clone()),
             created_at: Set(from_utc(p.created_at)),
             created_by: Set(p.created_by.clone()),
-            updated_at: Set(opt_from_utc(p.updated_at)),
+            updated_at: Set(Some(from_utc(p.updated_at))),
             updated_by: Set(p.updated_by.clone()),
         };
         profile::Entity::insert(active)
@@ -600,7 +603,7 @@ impl WishlistItemRepository for PgWishlistItemRepository {
             product_id: Set(item.product_id),
             product_name: Set(item.product_name.clone()),
             base_price: Set(price),
-            added_at: Set(from_utc(item.added_at)),
+            added_at: Set(from_utc(item.created_at)),
         };
         wishlist_item::Entity::insert(active)
             .on_conflict(

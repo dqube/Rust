@@ -8,6 +8,7 @@ use crate::application::commands::*;
 use crate::application::deps::AppDeps;
 use crate::application::queries::*;
 use crate::domain::entities::Designation;
+use crate::domain::ids::DesignationId;
 use crate::domain::repositories::DesignationRepository;
 
 // ── CreateDesignation ─────────────────────────────────────────────────────────
@@ -41,11 +42,11 @@ pub struct UpdateDesignationHandler {
 #[async_trait]
 impl CommandHandler<UpdateDesignation> for UpdateDesignationHandler {
     async fn handle(&self, cmd: UpdateDesignation) -> AppResult<Designation> {
-        let mut des = self.repo.find_by_id(cmd.id).await?
+        let mut des = self.repo.find_by_id(DesignationId::from_uuid(cmd.id)).await?
             .ok_or_else(|| AppError::not_found("Designation", cmd.id.to_string()))?;
         des.designation_name = cmd.designation_name;
         des.level            = cmd.level;
-        des.updated_at       = Some(chrono::Utc::now());
+        des.updated_at       = chrono::Utc::now();
         self.repo.save(&des).await?;
         Ok(des)
     }
@@ -64,7 +65,7 @@ pub struct GetDesignationHandler {
 #[async_trait]
 impl QueryHandler<GetDesignation> for GetDesignationHandler {
     async fn handle(&self, q: GetDesignation) -> AppResult<Option<Designation>> {
-        self.repo.find_by_id(q.id).await
+        self.repo.find_by_id(DesignationId::from_uuid(q.id)).await
     }
 }
 

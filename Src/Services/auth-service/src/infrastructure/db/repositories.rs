@@ -49,6 +49,10 @@ fn to_user(m: user::Model) -> AppResult<User> {
     let user_type = UserType::from_str(&m.user_type)?;
     Ok(User {
         id: UserId::from_uuid(m.id),
+        version: 0,
+        created_at: to_utc(m.created_at),
+        updated_at: opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events: Vec::new(),
         username: m.username,
         email: m.email,
         email_confirmed: m.email_confirmed,
@@ -63,34 +67,36 @@ fn to_user(m: user::Model) -> AppResult<User> {
         is_locked: m.is_locked,
         lockout_end: opt_to_utc(m.lockout_end),
         failed_login_attempts: m.failed_login_attempts,
-        created_at: to_utc(m.created_at),
-        updated_at: opt_to_utc(m.updated_at),
         last_login_at: opt_to_utc(m.last_login_at),
-        domain_events: Vec::new(),
     })
 }
 
 fn to_role(m: role::Model) -> AppResult<Role> {
     Ok(Role {
         id: RoleId::from_uuid(m.id),
+        version: 0,
+        created_at: to_utc(m.created_at),
+        updated_at: opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events: Vec::new(),
         name: m.name,
         role_type: RoleType::from_str(&m.role_type)?,
         description: m.description,
         is_active: m.is_active,
-        created_at: to_utc(m.created_at),
-        updated_at: opt_to_utc(m.updated_at),
     })
 }
 
 fn to_user_role(m: user_role::Model) -> UserRole {
+    let assigned_at = to_utc(m.assigned_at);
     UserRole {
         id: UserRoleId::from_uuid(m.id),
+        version: 0,
+        created_at: assigned_at,
+        updated_at: assigned_at,
+        domain_events: Vec::new(),
         user_id: UserId::from_uuid(m.user_id),
         role_id: RoleId::from_uuid(m.role_id),
         assigned_by: m.assigned_by.map(UserId::from_uuid),
-        assigned_at: to_utc(m.assigned_at),
         expires_at: opt_to_utc(m.expires_at),
-        domain_events: Vec::new(),
     }
 }
 
@@ -251,7 +257,7 @@ impl UserRepository for PgUserRepository {
             lockout_end: Set(opt_from_utc(u.lockout_end)),
             failed_login_attempts: Set(u.failed_login_attempts),
             created_at: Set(from_utc(u.created_at)),
-            updated_at: Set(opt_from_utc(u.updated_at)),
+            updated_at: Set(Some(from_utc(u.updated_at))),
             last_login_at: Set(opt_from_utc(u.last_login_at)),
         };
         user::Entity::insert(active)
@@ -335,7 +341,7 @@ impl RoleRepository for PgRoleRepository {
             description: Set(r.description.clone()),
             is_active: Set(r.is_active),
             created_at: Set(from_utc(r.created_at)),
-            updated_at: Set(opt_from_utc(r.updated_at)),
+            updated_at: Set(Some(from_utc(r.updated_at))),
         };
         role::Entity::insert(active)
             .on_conflict(
@@ -418,7 +424,7 @@ impl UserRoleRepository for PgUserRoleRepository {
             user_id: Set(ur.user_id.as_uuid()),
             role_id: Set(ur.role_id.as_uuid()),
             assigned_by: Set(ur.assigned_by.map(|a| a.as_uuid())),
-            assigned_at: Set(from_utc(ur.assigned_at)),
+            assigned_at: Set(from_utc(ur.created_at)),
             expires_at: Set(opt_from_utc(ur.expires_at)),
         };
         user_role::Entity::insert(active)

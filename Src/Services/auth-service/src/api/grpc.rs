@@ -117,7 +117,7 @@ fn user_role_item(ur: &UserRoleWithName) -> UserRoleItem {
         role_id: ur.user_role.role_id.to_string(),
         role_name: ur.role_name.clone(),
         role_type: ur.role_type.clone(),
-        assigned_at: fmt(ur.user_role.assigned_at),
+        assigned_at: fmt(ur.user_role.created_at),
         expires_at: fmt_opt(ur.user_role.expires_at),
     }
 }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use ddd_shared_kernel::{AppError, Page, PageRequest};
+use ddd_shared_kernel::{AppError, AppResult, Page, PageRequest};
 use sea_orm::{
     ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
     PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::domain::entities::{Department, Designation, Employee};
 use crate::domain::enums::{EmployeeStatus, EmploymentType, Gender};
+use crate::domain::ids::{DepartmentId, DesignationId, EmployeeId};
 use crate::domain::repositories::{DepartmentRepository, DesignationRepository, EmployeeRepository};
 use crate::infrastructure::db::models::{department, designation, employee};
 
@@ -30,15 +31,16 @@ fn opt_to_utc(dt: Option<sea_orm::prelude::DateTimeWithTimeZone>) -> Option<Date
 fn from_utc(dt: DateTime<Utc>) -> sea_orm::prelude::DateTimeWithTimeZone {
     dt.fixed_offset()
 }
-fn opt_from_utc(dt: Option<DateTime<Utc>>) -> Option<sea_orm::prelude::DateTimeWithTimeZone> {
-    dt.map(|d| d.fixed_offset())
-}
 
 // ── model → domain mappers ────────────────────────────────────────────────────
 
 fn m2employee(m: employee::Model) -> Employee {
     Employee {
-        id:                  m.id,
+        id:                  EmployeeId::from_uuid(m.id),
+        version:             0,
+        created_at:          to_utc(m.created_at),
+        updated_at:          opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events:       Vec::new(),
         user_id:             m.user_id,
         employee_code:       m.employee_code,
         first_name:          m.first_name,
@@ -65,32 +67,34 @@ fn m2employee(m: employee::Model) -> Employee {
         bank_name:           m.bank_name,
         avatar_object_name:  m.avatar_object_name,
         current_store_id:    m.current_store_id,
-        created_at:          to_utc(m.created_at),
-        updated_at:          opt_to_utc(m.updated_at),
     }
 }
 
 fn m2department(m: department::Model) -> Department {
     Department {
-        id:                    m.id,
+        id:                    DepartmentId::from_uuid(m.id),
+        version:               0,
+        created_at:            to_utc(m.created_at),
+        updated_at:            opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events:         Vec::new(),
         department_name:       m.department_name,
         department_code:       m.department_code,
         parent_department_id:  m.parent_department_id,
         head_of_department_id: m.head_of_department_id,
         is_active:             m.is_active,
-        created_at:            to_utc(m.created_at),
-        updated_at:            opt_to_utc(m.updated_at),
     }
 }
 
 fn m2designation(m: designation::Model) -> Designation {
     Designation {
-        id:               m.id,
+        id:               DesignationId::from_uuid(m.id),
+        version:          0,
+        created_at:       to_utc(m.created_at),
+        updated_at:       opt_to_utc(m.updated_at).unwrap_or_else(|| to_utc(m.created_at)),
+        domain_events:    Vec::new(),
         designation_name: m.designation_name,
         level:            m.level,
         is_active:        m.is_active,
-        created_at:       to_utc(m.created_at),
-        updated_at:       opt_to_utc(m.updated_at),
     }
 }
 
@@ -100,39 +104,39 @@ pub struct PgEmployeeRepository(pub Arc<DatabaseConnection>);
 
 #[async_trait]
 impl EmployeeRepository for PgEmployeeRepository {
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Employee>, AppError> {
-        Ok(employee::Entity::find_by_id(id)
+    async fn find_by_id(&self, id: EmployeeId) -> AppResult<Option<Employee>> {
+        Ok(employee::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(m2employee))
     }
 
-    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Option<Employee>, AppError> {
+    async fn find_by_user_id(&self, user_id: Uuid) -> AppResult<Option<Employee>> {
         Ok(employee::Entity::find()
             .filter(employee::Column::UserId.eq(user_id))
             .one(&*self.0).await.map_err(db_err)?
             .map(m2employee))
     }
 
-    async fn find_by_code(&self, code: &str) -> Result<Option<Employee>, AppError> {
+    async fn find_by_code(&self, code: &str) -> AppResult<Option<Employee>> {
         Ok(employee::Entity::find()
             .filter(employee::Column::EmployeeCode.eq(code.to_string()))
             .one(&*self.0).await.map_err(db_err)?
             .map(m2employee))
     }
 
-    async fn code_exists(&self, code: &str) -> Result<bool, AppError> {
+    async fn code_exists(&self, code: &str) -> AppResult<bool> {
         Ok(employee::Entity::find()
             .filter(employee::Column::EmployeeCode.eq(code.to_string()))
             .count(&*self.0).await.map_err(db_err)? > 0)
     }
 
-    async fn user_id_exists(&self, user_id: Uuid) -> Result<bool, AppError> {
+    async fn user_id_exists(&self, user_id: Uuid) -> AppResult<bool> {
         Ok(employee::Entity::find()
             .filter(employee::Column::UserId.eq(user_id))
             .count(&*self.0).await.map_err(db_err)? > 0)
     }
 
-    async fn email_exists(&self, email: &str) -> Result<bool, AppError> {
+    async fn email_exists(&self, email: &str) -> AppResult<bool> {
         Ok(employee::Entity::find()
             .filter(employee::Column::Email.eq(email.to_string()))
             .count(&*self.0).await.map_err(db_err)? > 0)
@@ -144,7 +148,7 @@ impl EmployeeRepository for PgEmployeeRepository {
         department_id: Option<Uuid>,
         search: Option<&str>,
         req: &PageRequest,
-    ) -> Result<Page<Employee>, AppError> {
+    ) -> AppResult<Page<Employee>> {
         let mut q = employee::Entity::find();
         if let Some(s) = status_filter {
             if !s.is_empty() {
@@ -156,7 +160,6 @@ impl EmployeeRepository for PgEmployeeRepository {
         }
         if let Some(s) = search {
             use sea_orm::Condition;
-            let pat = format!("%{}%", s.to_lowercase());
             q = q.filter(
                 Condition::any()
                     .add(employee::Column::FirstName.contains(s.to_lowercase()))
@@ -164,7 +167,6 @@ impl EmployeeRepository for PgEmployeeRepository {
                     .add(employee::Column::EmployeeCode.contains(s.to_lowercase()))
                     .add(employee::Column::Email.contains(s.to_lowercase())),
             );
-            drop(pat);
         }
         let total = q.clone().count(&*self.0).await.map_err(db_err)? as u64;
         let page = req.page().max(1);
@@ -179,9 +181,9 @@ impl EmployeeRepository for PgEmployeeRepository {
         Ok(Page::new(items, total, page, per_page))
     }
 
-    async fn save(&self, e: &Employee) -> Result<(), AppError> {
+    async fn save(&self, e: &Employee) -> AppResult<()> {
         let active = employee::ActiveModel {
-            id:                  Set(e.id),
+            id:                  Set(e.id.as_uuid()),
             user_id:             Set(e.user_id),
             employee_code:       Set(e.employee_code.clone()),
             first_name:          Set(e.first_name.clone()),
@@ -207,7 +209,7 @@ impl EmployeeRepository for PgEmployeeRepository {
             avatar_object_name:  Set(e.avatar_object_name.clone()),
             current_store_id:    Set(e.current_store_id),
             created_at:          Set(from_utc(e.created_at)),
-            updated_at:          Set(opt_from_utc(e.updated_at)),
+            updated_at:          Set(Some(from_utc(e.updated_at))),
         };
         employee::Entity::insert(active)
             .on_conflict(
@@ -249,13 +251,13 @@ pub struct PgDepartmentRepository(pub Arc<DatabaseConnection>);
 
 #[async_trait]
 impl DepartmentRepository for PgDepartmentRepository {
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Department>, AppError> {
-        Ok(department::Entity::find_by_id(id)
+    async fn find_by_id(&self, id: DepartmentId) -> AppResult<Option<Department>> {
+        Ok(department::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(m2department))
     }
 
-    async fn code_exists(&self, code: &str) -> Result<bool, AppError> {
+    async fn code_exists(&self, code: &str) -> AppResult<bool> {
         Ok(department::Entity::find()
             .filter(department::Column::DepartmentCode.eq(code.to_string()))
             .count(&*self.0).await.map_err(db_err)? > 0)
@@ -268,16 +270,16 @@ impl DepartmentRepository for PgDepartmentRepository {
             .into_iter().map(m2department).collect())
     }
 
-    async fn save(&self, d: &Department) -> Result<(), AppError> {
+    async fn save(&self, d: &Department) -> AppResult<()> {
         let active = department::ActiveModel {
-            id:                    Set(d.id),
+            id:                    Set(d.id.as_uuid()),
             department_name:       Set(d.department_name.clone()),
             department_code:       Set(d.department_code.clone()),
             parent_department_id:  Set(d.parent_department_id),
             head_of_department_id: Set(d.head_of_department_id),
             is_active:             Set(d.is_active),
             created_at:            Set(from_utc(d.created_at)),
-            updated_at:            Set(opt_from_utc(d.updated_at)),
+            updated_at:            Set(Some(from_utc(d.updated_at))),
         };
         department::Entity::insert(active)
             .on_conflict(
@@ -303,13 +305,13 @@ pub struct PgDesignationRepository(pub Arc<DatabaseConnection>);
 
 #[async_trait]
 impl DesignationRepository for PgDesignationRepository {
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Designation>, AppError> {
-        Ok(designation::Entity::find_by_id(id)
+    async fn find_by_id(&self, id: DesignationId) -> AppResult<Option<Designation>> {
+        Ok(designation::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(m2designation))
     }
 
-    async fn name_exists(&self, name: &str) -> Result<bool, AppError> {
+    async fn name_exists(&self, name: &str) -> AppResult<bool> {
         Ok(designation::Entity::find()
             .filter(designation::Column::DesignationName.eq(name.to_string()))
             .count(&*self.0).await.map_err(db_err)? > 0)
@@ -322,14 +324,14 @@ impl DesignationRepository for PgDesignationRepository {
             .into_iter().map(m2designation).collect())
     }
 
-    async fn save(&self, d: &Designation) -> Result<(), AppError> {
+    async fn save(&self, d: &Designation) -> AppResult<()> {
         let active = designation::ActiveModel {
-            id:               Set(d.id),
+            id:               Set(d.id.as_uuid()),
             designation_name: Set(d.designation_name.clone()),
             level:            Set(d.level),
             is_active:        Set(d.is_active),
             created_at:       Set(from_utc(d.created_at)),
-            updated_at:       Set(opt_from_utc(d.updated_at)),
+            updated_at:       Set(Some(from_utc(d.updated_at))),
         };
         designation::Entity::insert(active)
             .on_conflict(

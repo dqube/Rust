@@ -10,13 +10,13 @@ use ddd_bff::prelude::*;
 
 use crate::application::state::AppState;
 use crate::proto_catalog::{
-    ActivateBrandRequest, ActivateTaxConfigurationRequest, AddProductVariantRequest,
+    AddProductVariantRequest,
     AssignProductBrandRequest, BrandIdRequest, CalculateTaxRequest, ConfirmCategoryImageUploadRequest,
     ConfirmProductImageUploadRequest, CreateBrandRequest, CreateCategoryRequest,
-    CreateProductRequest, CreateTaxConfigurationRequest, DeactivateBrandRequest,
-    DeactivateTaxConfigurationRequest, DeleteCategoryRequest, DeleteProductImageRequest,
-    DeleteTaxConfigurationRequest, GetApplicableTaxConfigurationsRequest, GetBrandRequest,
-    GetCategoryRequest, GetProductRequest, GetTaxConfigurationRequest, ListBrandsRequest,
+    CreateProductRequest, CreateTaxConfigurationRequest,
+    DeleteCategoryRequest, DeleteProductImageRequest,
+    GetApplicableTaxConfigurationsRequest, GetBrandRequest,
+    GetCategoryRequest, GetProductRequest, ListBrandsRequest,
     ListCategoriesRequest, ListProductsRequest, ListTaxConfigurationsRequest,
     RemoveProductVariantRequest, RequestCategoryImageUploadUrlRequest,
     RequestProductImageUploadUrlRequest, SetDefaultVariantRequest, SetProductDimensionsRequest,
@@ -620,7 +620,7 @@ pub async fn get_tax_configuration(
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
-            state.catalog_client.client().get_tax_configuration(GetTaxConfigurationRequest { tax_config_id: id }).await
+            state.catalog_client.client().get_tax_configuration(TaxConfigIdRequest { tax_config_id: id }).await
         })
         .await
         .into_problem()?;
@@ -664,7 +664,7 @@ pub async fn activate_tax_configuration(
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
-            state.catalog_client.client().activate_tax_configuration(ActivateTaxConfigurationRequest { tax_config_id: id }).await
+            state.catalog_client.client().activate_tax_configuration(TaxConfigIdRequest { tax_config_id: id }).await
         })
         .await
         .into_problem()?;
@@ -678,7 +678,7 @@ pub async fn deactivate_tax_configuration(
 ) -> Result<impl IntoResponse, ProblemDetail> {
     let resp = TRACE_CTX
         .scope(trace_ctx, async {
-            state.catalog_client.client().deactivate_tax_configuration(DeactivateTaxConfigurationRequest { tax_config_id: id }).await
+            state.catalog_client.client().deactivate_tax_configuration(TaxConfigIdRequest { tax_config_id: id }).await
         })
         .await
         .into_problem()?;

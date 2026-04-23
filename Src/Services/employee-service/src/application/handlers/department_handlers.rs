@@ -1,61 +1,97 @@
-use ddd_application::{register_command_handler, register_query_handler};
-use ddd_shared_kernel::AppError;
+use std::sync::Arc;
 
-use crate::application::commands::{CreateDepartment, UpdateDepartment};
+use async_trait::async_trait;
+use ddd_application::{CommandHandler, QueryHandler, register_command_handler, register_query_handler};
+use ddd_shared_kernel::{AppError, AppResult};
+
+use crate::application::commands::*;
 use crate::application::deps::AppDeps;
-use crate::application::queries::{GetDepartment, ListDepartments};
+use crate::application::queries::*;
 use crate::domain::entities::Department;
+use crate::domain::repositories::DepartmentRepository;
+
+// ── CreateDepartment ──────────────────────────────────────────────────────────
+
+pub struct CreateDepartmentHandler {
+    repo: Arc<dyn DepartmentRepository>,
+}
+
+#[async_trait]
+impl CommandHandler<CreateDepartment> for CreateDepartmentHandler {
+    async fn handle(&self, cmd: CreateDepartment) -> AppResult<Department> {
+        if let Some(ref code) = cmd.department_code {
+            if self.repo.code_exists(code).await? {
+                return Err(AppError::conflict("A department with this code already exists"));
+            }
+        }
+        let dept = Department::create(
+            cmd.department_name,
+            cmd.department_code,
+            cmd.parent_department_id,
+            cmd.head_of_department_id,
+        );
+        self.repo.save(&dept).await?;
+        Ok(dept)
+    }
+}
 
 register_command_handler!(CreateDepartment, AppDeps, |d: &AppDeps| {
-    let repo = d.department_repo.clone();
-    move |cmd: CreateDepartment| {
-        let repo = repo.clone();
-        async move {
-            if let Some(ref code) = cmd.department_code {
-                if !code.is_empty() && repo.code_exists(code).await? {
-                    return Err(AppError::conflict(format!("Department code '{}' already exists", code)));
-                }
-            }
-            let dept = Department::create(
-                cmd.department_name,
-                cmd.department_code,
-                cmd.parent_department_id,
-                cmd.head_of_department_id,
-            );
-            repo.save(&dept).await?;
-            Ok(dept)
-        }
-    }
+    CreateDepartmentHandler { repo: d.department_repo.clone() }
 });
+
+// ── UpdateDepartment ──────────────────────────────────────────────────────────
+
+pub struct UpdateDepartmentHandler {
+    repo: Arc<dyn DepartmentRepository>,
+}
+
+#[async_trait]
+impl CommandHandler<UpdateDepartment> for UpdateDepartmentHandler {
+    async fn handle(&self, cmd: UpdateDepartment) -> AppResult<Department> {
+        let mut dept = self.repo.find_by_id(cmd.id).await?
+            .ok_or_else(|| AppError::not_found("Department", cmd.id.to_string()))?;
+        dept.department_name = cmd.department_name;
+        dept.department_code = cmd.department_code;
+        dept.updated_at      = Some(chrono::Utc::now());
+        self.repo.save(&dept).await?;
+        Ok(dept)
+    }
+}
 
 register_command_handler!(UpdateDepartment, AppDeps, |d: &AppDeps| {
-    let repo = d.department_repo.clone();
-    move |cmd: UpdateDepartment| {
-        let repo = repo.clone();
-        async move {
-            let mut dept = repo.find_by_id(cmd.id).await?
-                .ok_or_else(|| AppError::not_found(format!("Department {} not found", cmd.id)))?;
-            dept.department_name = cmd.department_name;
-            dept.department_code = cmd.department_code;
-            dept.updated_at = Some(chrono::Utc::now());
-            repo.save(&dept).await?;
-            Ok(dept)
-        }
-    }
+    UpdateDepartmentHandler { repo: d.department_repo.clone() }
 });
+
+// ── GetDepartment ─────────────────────────────────────────────────────────────
+
+pub struct GetDepartmentHandler {
+    repo: Arc<dyn DepartmentRepository>,
+}
+
+#[async_trait]
+impl QueryHandler<GetDepartment> for GetDepartmentHandler {
+    async fn handle(&self, q: GetDepartment) -> AppResult<Option<Department>> {
+        self.repo.find_by_id(q.id).await
+    }
+}
 
 register_query_handler!(GetDepartment, AppDeps, |d: &AppDeps| {
-    let repo = d.department_repo.clone();
-    move |q: GetDepartment| {
-        let repo = repo.clone();
-        async move { repo.find_by_id(q.id).await }
-    }
+    GetDepartmentHandler { repo: d.department_repo.clone() }
 });
 
-register_query_handler!(ListDepartments, AppDeps, |d: &AppDeps| {
-    let repo = d.department_repo.clone();
-    move |_q: ListDepartments| {
-        let repo = repo.clone();
-        async move { repo.get_all().await }
+// ── ListDepartments ───────────────────────────────────────────────────────────
+
+pub struct ListDepartmentsHandler {
+    repo: Arc<dyn DepartmentRepository>,
+}
+
+#[async_trait]
+impl QueryHandler<ListDepartments> for ListDepartmentsHandler {
+    async fn handle(&self, _q: ListDepartments) -> AppResult<Vec<Department>> {
+        self.repo.get_all().await
     }
+}
+
+register_query_handler!(ListDepartments, AppDeps, |d: &AppDeps| {
+    ListDepartmentsHandler { repo: d.department_repo.clone() }
 });

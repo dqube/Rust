@@ -7,38 +7,48 @@ use crate::domain::entities::{
 };
 use crate::domain::ids::*;
 
-impl_query! { GetSupplier       { id: SupplierId }               -> Option<Supplier>           }
+pub struct GetSupplier {
+    pub id: SupplierId,
+}
+impl_query!(GetSupplier, Option<Supplier>);
 
-impl_query! {
-    ListSuppliers {
-        active_only: bool,
-        search:      Option<String>,
-        req:         PageRequest,
-    } -> Page<Supplier>
+pub struct ListSuppliers {
+    pub active_only: bool,
+    pub search:      Option<String>,
+    pub req:         PageRequest,
 }
+impl_query!(ListSuppliers, Page<Supplier>);
 
-impl_query! {
-    GetSupplierAddresses { supplier_id: SupplierId } -> Vec<SupplierAddress>
+pub struct GetSupplierAddresses {
+    pub supplier_id: SupplierId,
 }
-impl_query! {
-    GetSupplierContacts  { supplier_id: SupplierId } -> Vec<SupplierContact>
-}
-impl_query! {
-    GetSupplierDocuments { supplier_id: SupplierId } -> Vec<(SupplierDocument, String, String)>
-    // (document, url, url_expires_at)
-}
-impl_query! {
-    ListSupplierProducts { supplier_id: SupplierId } -> Vec<SupplierProduct>
-}
+impl_query!(GetSupplierAddresses, Vec<SupplierAddress>);
 
-impl_query! { GetPurchaseOrder   { id: OrderId }                  -> Option<PurchaseOrder>      }
-
-impl_query! {
-    ListPurchaseOrders {
-        supplier_id: Option<SupplierId>,
-        store_id:    Option<i32>,
-        status:      Option<String>,
-        from_date:   Option<DateTime<Utc>>,
-        to_date:     Option<DateTime<Utc>>,
-    } -> Vec<PurchaseOrder>
+pub struct GetSupplierContacts {
+    pub supplier_id: SupplierId,
 }
+impl_query!(GetSupplierContacts, Vec<SupplierContact>);
+
+pub struct GetSupplierDocuments {
+    pub supplier_id: SupplierId,
+}
+impl_query!(GetSupplierDocuments, Vec<(SupplierDocument, String, String)>);
+
+pub struct ListSupplierProducts {
+    pub supplier_id: SupplierId,
+}
+impl_query!(ListSupplierProducts, Vec<SupplierProduct>);
+
+pub struct GetPurchaseOrder {
+    pub id: OrderId,
+}
+impl_query!(GetPurchaseOrder, Option<PurchaseOrder>);
+
+pub struct ListPurchaseOrders {
+    pub supplier_id: Option<SupplierId>,
+    pub store_id:    Option<i32>,
+    pub status:      Option<String>,
+    pub from_date:   Option<DateTime<Utc>>,
+    pub to_date:     Option<DateTime<Utc>>,
+}
+impl_query!(ListPurchaseOrders, Vec<PurchaseOrder>);

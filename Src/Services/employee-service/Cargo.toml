@@ -24,7 +24,7 @@ tonic-web   = { workspace = true }
 prost       = { workspace = true }
 
 # Database
-sea-orm      = { workspace = true, features = ["with-rust-decimal"] }
+sea-orm      = { workspace = true, features = ["with-rust_decimal"] }
 sqlx         = { workspace = true }
 
 # Serde / common

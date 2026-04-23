@@ -4,27 +4,52 @@ use uuid::Uuid;
 
 use crate::domain::entities::{Department, Designation, Employee};
 
-impl_query! { GetEmployee        { id: Uuid }              -> Option<Employee>       }
-impl_query! { GetEmployeeByUserId { user_id: Uuid }        -> Option<Employee>       }
-impl_query! { GetEmployeeByCode  { code: String }          -> Option<Employee>       }
+// ── Employee ──────────────────────────────────────────────────────────────────
 
-impl_query! {
-    ListEmployees {
-        status_filter: Option<String>,
-        department_id: Option<Uuid>,
-        search:        Option<String>,
-        req:           PageRequest,
-    } -> Page<Employee>
+pub struct GetEmployee {
+    pub id: Uuid,
 }
+impl_query!(GetEmployee, Option<Employee>);
 
-impl_query! { GetDepartment      { id: Uuid }              -> Option<Department>     }
-impl_query! { ListDepartments    {}                        -> Vec<Department>        }
-
-impl_query! { GetDesignation     { id: Uuid }              -> Option<Designation>    }
-impl_query! { ListDesignations   {}                        -> Vec<Designation>       }
-
-impl_query! {
-    GetAvatarUrl {
-        employee_id: Uuid,
-    } -> (String, String)  // (url, expires_at)
+pub struct GetEmployeeByUserId {
+    pub user_id: Uuid,
 }
+impl_query!(GetEmployeeByUserId, Option<Employee>);
+
+pub struct GetEmployeeByCode {
+    pub code: String,
+}
+impl_query!(GetEmployeeByCode, Option<Employee>);
+
+pub struct ListEmployees {
+    pub status_filter: Option<String>,
+    pub department_id: Option<Uuid>,
+    pub search:        Option<String>,
+    pub req:           PageRequest,
+}
+impl_query!(ListEmployees, Page<Employee>);
+
+pub struct GetAvatarUrl {
+    pub employee_id: Uuid,
+}
+impl_query!(GetAvatarUrl, (String, String));
+
+// ── Department ────────────────────────────────────────────────────────────────
+
+pub struct GetDepartment {
+    pub id: Uuid,
+}
+impl_query!(GetDepartment, Option<Department>);
+
+pub struct ListDepartments {}
+impl_query!(ListDepartments, Vec<Department>);
+
+// ── Designation ───────────────────────────────────────────────────────────────
+
+pub struct GetDesignation {
+    pub id: Uuid,
+}
+impl_query!(GetDesignation, Option<Designation>);
+
+pub struct ListDesignations {}
+impl_query!(ListDesignations, Vec<Designation>);

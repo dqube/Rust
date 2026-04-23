@@ -6,127 +6,115 @@ use uuid::Uuid;
 use crate::domain::entities::{Department, Designation, Employee};
 use crate::domain::enums::{EmploymentType, Gender};
 
-// ── Employee commands ─────────────────────────────────────────────────────────
+// ── Employee ──────────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateEmployee {
-        user_id:             Uuid,
-        first_name:          String,
-        last_name:           String,
-        middle_name:         Option<String>,
-        date_of_birth:       Option<NaiveDate>,
-        gender:              Option<Gender>,
-        email:               String,
-        personal_email:      Option<String>,
-        phone:               Option<String>,
-        mobile:              Option<String>,
-        department_id:       Option<Uuid>,
-        designation_id:      Option<Uuid>,
-        manager_id:          Option<Uuid>,
-        employment_type:     EmploymentType,
-        date_of_joining:     NaiveDate,
-        salary:              Option<Decimal>,
-        bank_account_number: Option<String>,
-        bank_ifsc_code:      Option<String>,
-        bank_name:           Option<String>,
-    } -> Employee
+pub struct CreateEmployee {
+    pub user_id:             Uuid,
+    pub first_name:          String,
+    pub last_name:           String,
+    pub middle_name:         Option<String>,
+    pub date_of_birth:       Option<NaiveDate>,
+    pub gender:              Option<Gender>,
+    pub email:               String,
+    pub personal_email:      Option<String>,
+    pub phone:               Option<String>,
+    pub mobile:              Option<String>,
+    pub department_id:       Option<Uuid>,
+    pub designation_id:      Option<Uuid>,
+    pub manager_id:          Option<Uuid>,
+    pub employment_type:     EmploymentType,
+    pub date_of_joining:     NaiveDate,
+    pub salary:              Option<Decimal>,
+    pub bank_account_number: Option<String>,
+    pub bank_ifsc_code:      Option<String>,
+    pub bank_name:           Option<String>,
 }
+impl_command!(CreateEmployee, Employee);
 
-impl_command! {
-    UpdateEmployee {
-        id:                  Uuid,
-        first_name:          String,
-        last_name:           String,
-        middle_name:         Option<String>,
-        date_of_birth:       Option<NaiveDate>,
-        gender:              Option<Gender>,
-        email:               String,
-        personal_email:      Option<String>,
-        phone:               Option<String>,
-        mobile:              Option<String>,
-        department_id:       Option<Uuid>,
-        designation_id:      Option<Uuid>,
-        manager_id:          Option<Uuid>,
-        employment_type:     EmploymentType,
-        salary:              Option<Decimal>,
-        bank_account_number: Option<String>,
-        bank_ifsc_code:      Option<String>,
-        bank_name:           Option<String>,
-    } -> Employee
+pub struct UpdateEmployee {
+    pub id:                  Uuid,
+    pub first_name:          String,
+    pub last_name:           String,
+    pub middle_name:         Option<String>,
+    pub date_of_birth:       Option<NaiveDate>,
+    pub gender:              Option<Gender>,
+    pub email:               String,
+    pub personal_email:      Option<String>,
+    pub phone:               Option<String>,
+    pub mobile:              Option<String>,
+    pub department_id:       Option<Uuid>,
+    pub designation_id:      Option<Uuid>,
+    pub manager_id:          Option<Uuid>,
+    pub employment_type:     EmploymentType,
+    pub salary:              Option<Decimal>,
+    pub bank_account_number: Option<String>,
+    pub bank_ifsc_code:      Option<String>,
+    pub bank_name:           Option<String>,
 }
+impl_command!(UpdateEmployee, Employee);
 
-impl_command! {
-    TerminateEmployee {
-        id:              Uuid,
-        date_of_leaving: NaiveDate,
-    } -> Employee
+pub struct TerminateEmployee {
+    pub id:              Uuid,
+    pub date_of_leaving: NaiveDate,
 }
+impl_command!(TerminateEmployee, Employee);
 
-impl_command! {
-    ReactivateEmployee {
-        id: Uuid,
-    } -> Employee
+pub struct ReactivateEmployee {
+    pub id: Uuid,
 }
+impl_command!(ReactivateEmployee, Employee);
 
-impl_command! {
-    AssignEmployeeToStore {
-        id:       Uuid,
-        store_id: i32,
-    } -> Employee
+pub struct AssignEmployeeToStore {
+    pub id:       Uuid,
+    pub store_id: i32,
 }
+impl_command!(AssignEmployeeToStore, Employee);
 
-impl_command! {
-    RequestAvatarUploadUrl {
-        employee_id:  Uuid,
-        content_type: String,
-    } -> (String, String, String)  // (upload_url, object_name, expires_at)
+pub struct RequestAvatarUploadUrl {
+    pub employee_id:  Uuid,
+    pub content_type: String,
 }
+impl_command!(RequestAvatarUploadUrl, (String, String, String));
 
-impl_command! {
-    ConfirmAvatarUpload {
-        employee_id: Uuid,
-        object_name: String,
-    } -> Employee
+pub struct ConfirmAvatarUpload {
+    pub employee_id: Uuid,
+    pub object_name: String,
 }
+impl_command!(ConfirmAvatarUpload, Employee);
 
-impl_command! {
-    DeleteAvatar {
-        employee_id: Uuid,
-    } -> Employee
+pub struct DeleteAvatar {
+    pub employee_id: Uuid,
 }
+impl_command!(DeleteAvatar, Employee);
 
-// ── Department commands ───────────────────────────────────────────────────────
+// ── Department ────────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateDepartment {
-        department_name:       String,
-        department_code:       Option<String>,
-        parent_department_id:  Option<Uuid>,
-        head_of_department_id: Option<Uuid>,
-    } -> Department
+pub struct CreateDepartment {
+    pub department_name:       String,
+    pub department_code:       Option<String>,
+    pub parent_department_id:  Option<Uuid>,
+    pub head_of_department_id: Option<Uuid>,
 }
+impl_command!(CreateDepartment, Department);
 
-impl_command! {
-    UpdateDepartment {
-        id:               Uuid,
-        department_name:  String,
-        department_code:  Option<String>,
-    } -> Department
+pub struct UpdateDepartment {
+    pub id:              Uuid,
+    pub department_name: String,
+    pub department_code: Option<String>,
 }
+impl_command!(UpdateDepartment, Department);
 
-// ── Designation commands ──────────────────────────────────────────────────────
+// ── Designation ───────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateDesignation {
-        designation_name: String,
-        level:            Option<i32>,
-    } -> Designation
+pub struct CreateDesignation {
+    pub designation_name: String,
+    pub level:            Option<i32>,
 }
+impl_command!(CreateDesignation, Designation);
 
-impl_command! {
-    UpdateDesignation {
-        id:               Uuid,
-        designation_name: String,
-        level:            Option<i32>,
-    } -> Designation
+pub struct UpdateDesignation {
+    pub id:               Uuid,
+    pub designation_name: String,
+    pub level:            Option<i32>,
 }
+impl_command!(UpdateDesignation, Designation);

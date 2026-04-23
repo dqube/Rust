@@ -4,5 +4,6 @@ pub mod customer;
 pub mod employee;
 pub mod order;
 pub mod product;
+pub mod sales;
 pub mod shared;
 pub mod supplier;

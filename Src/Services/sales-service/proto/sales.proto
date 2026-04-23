@@ -1,0 +1,259 @@
+syntax = "proto3";
+package sales.v1;
+
+// ── Shared messages ───────────────────────────────────────────────────────────
+
+message SaleDetailInfo {
+    string id               = 1;
+    string sale_id          = 2;
+    string product_id       = 3;
+    string variant_id       = 4;  // empty = none
+    int32  quantity         = 5;
+    string unit_price       = 6;
+    string applied_discount = 7;
+    string tax_applied      = 8;
+    string line_total       = 9;
+    string created_at       = 10;
+}
+
+message AppliedDiscountInfo {
+    string id              = 1;
+    string sale_id         = 2;
+    string sale_detail_id  = 3;  // empty = order-level
+    string campaign_id     = 4;
+    string rule_id         = 5;
+    string discount_amount = 6;
+    string created_at      = 7;
+}
+
+message SaleInfo {
+    string sale_id                = 1;
+    int32  store_id               = 2;
+    string employee_id            = 3;
+    string customer_id            = 4;  // empty = anonymous
+    int32  register_id            = 5;
+    string receipt_number         = 6;
+    string transaction_time       = 7;
+    string sub_total              = 8;
+    string discount_total         = 9;
+    string tax_amount             = 10;
+    string total_amount           = 11;
+    string channel                = 12;
+    string status                 = 13;
+    string created_at             = 14;
+    repeated SaleDetailInfo     details   = 15;
+    repeated AppliedDiscountInfo discounts = 16;
+}
+
+message ReturnDetailInfo {
+    string id         = 1;
+    string return_id  = 2;
+    string product_id = 3;
+    int32  quantity   = 4;
+    string reason     = 5;
+    bool   restock    = 6;
+    string created_at = 7;
+}
+
+message ReturnInfo {
+    string return_id    = 1;
+    string sale_id      = 2;
+    string return_date  = 3;
+    string employee_id  = 4;
+    string customer_id  = 5;
+    string total_refund = 6;
+    string created_at   = 7;
+    repeated ReturnDetailInfo details = 8;
+}
+
+// ── Sale RPCs ─────────────────────────────────────────────────────────────────
+
+message CreateSaleRequest {
+    int32  store_id       = 1;
+    string employee_id    = 2;
+    int32  register_id    = 3;
+    string receipt_number = 4;
+    string customer_id    = 5;  // empty = anonymous
+    string channel        = 6;
+}
+
+message CreateSaleResponse { SaleInfo sale = 1; }
+
+message AddSaleDetailRequest {
+    string sale_id     = 1;
+    string product_id  = 2;
+    string variant_id  = 3;
+    int32  quantity    = 4;
+    string unit_price  = 5;
+    string tax_applied = 6;
+}
+
+message AddSaleDetailResponse {}
+
+message UpdateSaleDetailRequest {
+    string sale_id        = 1;
+    string sale_detail_id = 2;
+    int32  quantity       = 3;
+    string unit_price     = 4;
+    string tax_applied    = 5;
+}
+
+message UpdateSaleDetailResponse {}
+
+message RemoveSaleDetailRequest {
+    string sale_id        = 1;
+    string sale_detail_id = 2;
+}
+
+message RemoveSaleDetailResponse {}
+
+message ApplyDiscountRequest {
+    string sale_id         = 1;
+    string sale_detail_id  = 2;
+    string campaign_id     = 3;
+    string rule_id         = 4;
+    string discount_amount = 5;
+}
+
+message ApplyDiscountResponse {}
+
+message CompleteSaleRequest { string sale_id = 1; }
+message CompleteSaleResponse {}
+
+message CancelSaleRequest {
+    string sale_id = 1;
+    string reason  = 2;
+}
+message CancelSaleResponse {}
+
+message GetSaleByIdRequest  { string sale_id = 1; }
+message GetSaleByIdResponse { SaleInfo sale = 1; bool found = 2; }
+
+message GetSaleByReceiptRequest  { string receipt_number = 1; }
+message GetSaleByReceiptResponse { SaleInfo sale = 1; bool found = 2; }
+
+message GetSalesRequest {
+    int32  page      = 1;
+    int32  page_size = 2;
+    string status    = 3;
+}
+
+message GetSalesResponse {
+    repeated SaleInfo items = 1;
+    int32 total_count = 2;
+    int32 page        = 3;
+    int32 page_size   = 4;
+    int32 total_pages = 5;
+}
+
+message UpdateSaleStatusRequest {
+    string sale_id = 1;
+    string status  = 2;
+}
+
+message UpdateSaleStatusResponse {}
+
+message GetSalesByStoreRequest {
+    int32  store_id  = 1;
+    string from_date = 2;
+    string to_date   = 3;
+}
+
+message GetSalesByStoreResponse    { repeated SaleInfo items = 1; }
+
+message GetSalesByEmployeeRequest {
+    string employee_id = 1;
+    string from_date   = 2;
+    string to_date     = 3;
+}
+
+message GetSalesByEmployeeResponse { repeated SaleInfo items = 1; }
+
+message GetSalesByCustomerRequest  { string customer_id = 1; }
+message GetSalesByCustomerResponse { repeated SaleInfo items = 1; }
+
+message GetSaleReceiptUrlRequest  { string sale_id = 1; }
+message GetSaleReceiptUrlResponse { string url = 1; bool has_receipt = 2; }
+
+message UploadSaleReceiptRequest {
+    string sale_id      = 1;
+    bytes  file_content = 2;
+    string file_name    = 3;
+    string content_type = 4;
+}
+
+message UploadSaleReceiptResponse { string receipt_url = 1; }
+
+// ── Return RPCs ───────────────────────────────────────────────────────────────
+
+message CreateReturnRequest {
+    string sale_id     = 1;
+    string employee_id = 2;
+    string customer_id = 3;
+}
+
+message CreateReturnResponse { ReturnInfo ret = 1; }
+
+message AddReturnDetailRequest {
+    string return_id  = 1;
+    string product_id = 2;
+    int32  quantity   = 3;
+    string reason     = 4;
+    bool   restock    = 5;
+}
+
+message AddReturnDetailResponse {}
+
+message ProcessReturnRequest {
+    string return_id    = 1;
+    string total_refund = 2;
+}
+
+message ProcessReturnResponse {}
+
+message GetReturnByIdRequest       { string return_id  = 1; }
+message GetReturnByIdResponse      { ReturnInfo ret = 1; bool found = 2; }
+
+message GetReturnsBySaleRequest    { string sale_id    = 1; }
+message GetReturnsBySaleResponse   { repeated ReturnInfo returns = 1; }
+
+message GetReturnsByEmployeeRequest {
+    string employee_id = 1;
+    string from_date   = 2;
+    string to_date     = 3;
+}
+
+message GetReturnsByEmployeeResponse { repeated ReturnInfo returns = 1; }
+
+message GetReturnsByCustomerRequest  { string customer_id = 1; }
+message GetReturnsByCustomerResponse { repeated ReturnInfo returns = 1; }
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+service SalesService {
+    // Sales
+    rpc CreateSale            (CreateSaleRequest)            returns (CreateSaleResponse);
+    rpc AddSaleDetail         (AddSaleDetailRequest)         returns (AddSaleDetailResponse);
+    rpc UpdateSaleDetail      (UpdateSaleDetailRequest)      returns (UpdateSaleDetailResponse);
+    rpc RemoveSaleDetail      (RemoveSaleDetailRequest)      returns (RemoveSaleDetailResponse);
+    rpc ApplyDiscount         (ApplyDiscountRequest)         returns (ApplyDiscountResponse);
+    rpc CompleteSale          (CompleteSaleRequest)          returns (CompleteSaleResponse);
+    rpc CancelSale            (CancelSaleRequest)            returns (CancelSaleResponse);
+    rpc GetSaleById           (GetSaleByIdRequest)           returns (GetSaleByIdResponse);
+    rpc GetSaleByReceipt      (GetSaleByReceiptRequest)      returns (GetSaleByReceiptResponse);
+    rpc GetSales              (GetSalesRequest)              returns (GetSalesResponse);
+    rpc UpdateSaleStatus      (UpdateSaleStatusRequest)      returns (UpdateSaleStatusResponse);
+    rpc GetSalesByStore       (GetSalesByStoreRequest)       returns (GetSalesByStoreResponse);
+    rpc GetSalesByEmployee    (GetSalesByEmployeeRequest)    returns (GetSalesByEmployeeResponse);
+    rpc GetSalesByCustomer    (GetSalesByCustomerRequest)    returns (GetSalesByCustomerResponse);
+    rpc GetSaleReceiptUrl     (GetSaleReceiptUrlRequest)     returns (GetSaleReceiptUrlResponse);
+    rpc UploadSaleReceipt     (UploadSaleReceiptRequest)     returns (UploadSaleReceiptResponse);
+    // Returns
+    rpc CreateReturn          (CreateReturnRequest)          returns (CreateReturnResponse);
+    rpc AddReturnDetail       (AddReturnDetailRequest)       returns (AddReturnDetailResponse);
+    rpc ProcessReturn         (ProcessReturnRequest)         returns (ProcessReturnResponse);
+    rpc GetReturnById         (GetReturnByIdRequest)         returns (GetReturnByIdResponse);
+    rpc GetReturnsBySale      (GetReturnsBySaleRequest)      returns (GetReturnsBySaleResponse);
+    rpc GetReturnsByEmployee  (GetReturnsByEmployeeRequest)  returns (GetReturnsByEmployeeResponse);
+    rpc GetReturnsByCustomer  (GetReturnsByCustomerRequest)  returns (GetReturnsByCustomerResponse);
+}

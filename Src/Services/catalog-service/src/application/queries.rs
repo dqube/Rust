@@ -6,65 +6,71 @@ use crate::domain::ids::{BrandId, CategoryId, ProductId, TaxConfigId};
 
 // ── Product ───────────────────────────────────────────────────────────────────
 
-impl_query! { GetProduct { id: ProductId } -> Option<Product> }
-
-impl_query! {
-    ListProducts {
-        search:       Option<String>,
-        category_id:  Option<i32>,
-        min_price:    Option<f64>,
-        max_price:    Option<f64>,
-        sort_by:      Option<String>,
-        sort_desc:    bool,
-        req:          PageRequest,
-    } -> Page<Product>
+pub struct GetProduct {
+    pub id: ProductId,
 }
+impl_query!(GetProduct, Option<Product>);
+
+pub struct ListProducts {
+    pub search:      Option<String>,
+    pub category_id: Option<i32>,
+    pub min_price:   Option<f64>,
+    pub max_price:   Option<f64>,
+    pub sort_by:     Option<String>,
+    pub sort_desc:   bool,
+    pub req:         PageRequest,
+}
+impl_query!(ListProducts, Page<Product>);
 
 // ── Category ──────────────────────────────────────────────────────────────────
 
-impl_query! { GetCategory    { id: CategoryId }                      -> Option<ProductCategory> }
-impl_query! {
-    ListCategories {
-        parent_id: Option<i32>,
-    } -> Vec<ProductCategory>
+pub struct GetCategory {
+    pub id: CategoryId,
 }
+impl_query!(GetCategory, Option<ProductCategory>);
+
+pub struct ListCategories {
+    pub parent_id: Option<i32>,
+}
+impl_query!(ListCategories, Vec<ProductCategory>);
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
 
-impl_query! { GetBrand { id: BrandId } -> Option<Brand> }
-
-impl_query! {
-    ListBrands {
-        search:      Option<String>,
-        active_only: bool,
-        req:         PageRequest,
-    } -> Page<Brand>
+pub struct GetBrand {
+    pub id: BrandId,
 }
+impl_query!(GetBrand, Option<Brand>);
+
+pub struct ListBrands {
+    pub search:      Option<String>,
+    pub active_only: bool,
+    pub req:         PageRequest,
+}
+impl_query!(ListBrands, Page<Brand>);
 
 // ── Tax configuration ─────────────────────────────────────────────────────────
 
-impl_query! { GetTaxConfig { id: TaxConfigId } -> Option<TaxConfiguration> }
-
-impl_query! {
-    ListTaxConfigs {
-        location_id: Option<i32>,
-        tax_type:    Option<String>,
-        active_only: bool,
-    } -> Vec<TaxConfiguration>
+pub struct GetTaxConfig {
+    pub id: TaxConfigId,
 }
+impl_query!(GetTaxConfig, Option<TaxConfiguration>);
 
-impl_query! {
-    GetApplicableTaxConfigs {
-        location_id: i32,
-        category_id: Option<i32>,
-    } -> Vec<TaxConfiguration>
+pub struct ListTaxConfigs {
+    pub location_id: Option<i32>,
+    pub tax_type:    Option<String>,
+    pub active_only: bool,
 }
+impl_query!(ListTaxConfigs, Vec<TaxConfiguration>);
 
-impl_query! {
-    CalculateTax {
-        location_id: i32,
-        category_id: Option<i32>,
-        amount:      f64,
-    } -> (f64, f64, Vec<(String, String, String, f64, f64)>)
-    // (tax_amount, total_amount, [(name, code, tax_type, rate, amount)])
+pub struct GetApplicableTaxConfigs {
+    pub location_id: i32,
+    pub category_id: Option<i32>,
 }
+impl_query!(GetApplicableTaxConfigs, Vec<TaxConfiguration>);
+
+pub struct CalculateTax {
+    pub location_id: i32,
+    pub category_id: Option<i32>,
+    pub amount:      f64,
+}
+impl_query!(CalculateTax, (f64, f64, Vec<(String, String, String, f64, f64)>));

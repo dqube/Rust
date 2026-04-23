@@ -1,54 +1,90 @@
-use ddd_application::{register_command_handler, register_query_handler};
-use ddd_shared_kernel::AppError;
+use std::sync::Arc;
 
-use crate::application::commands::{CreateDesignation, UpdateDesignation};
+use async_trait::async_trait;
+use ddd_application::{CommandHandler, QueryHandler, register_command_handler, register_query_handler};
+use ddd_shared_kernel::{AppError, AppResult};
+
+use crate::application::commands::*;
 use crate::application::deps::AppDeps;
-use crate::application::queries::{GetDesignation, ListDesignations};
+use crate::application::queries::*;
 use crate::domain::entities::Designation;
+use crate::domain::repositories::DesignationRepository;
+
+// ── CreateDesignation ─────────────────────────────────────────────────────────
+
+pub struct CreateDesignationHandler {
+    repo: Arc<dyn DesignationRepository>,
+}
+
+#[async_trait]
+impl CommandHandler<CreateDesignation> for CreateDesignationHandler {
+    async fn handle(&self, cmd: CreateDesignation) -> AppResult<Designation> {
+        if self.repo.name_exists(&cmd.designation_name).await? {
+            return Err(AppError::conflict("A designation with this name already exists"));
+        }
+        let des = Designation::create(cmd.designation_name, cmd.level);
+        self.repo.save(&des).await?;
+        Ok(des)
+    }
+}
 
 register_command_handler!(CreateDesignation, AppDeps, |d: &AppDeps| {
-    let repo = d.designation_repo.clone();
-    move |cmd: CreateDesignation| {
-        let repo = repo.clone();
-        async move {
-            if repo.name_exists(&cmd.designation_name).await? {
-                return Err(AppError::conflict(format!("Designation '{}' already exists", cmd.designation_name)));
-            }
-            let desig = Designation::create(cmd.designation_name, cmd.level);
-            repo.save(&desig).await?;
-            Ok(desig)
-        }
-    }
+    CreateDesignationHandler { repo: d.designation_repo.clone() }
 });
+
+// ── UpdateDesignation ─────────────────────────────────────────────────────────
+
+pub struct UpdateDesignationHandler {
+    repo: Arc<dyn DesignationRepository>,
+}
+
+#[async_trait]
+impl CommandHandler<UpdateDesignation> for UpdateDesignationHandler {
+    async fn handle(&self, cmd: UpdateDesignation) -> AppResult<Designation> {
+        let mut des = self.repo.find_by_id(cmd.id).await?
+            .ok_or_else(|| AppError::not_found("Designation", cmd.id.to_string()))?;
+        des.designation_name = cmd.designation_name;
+        des.level            = cmd.level;
+        des.updated_at       = Some(chrono::Utc::now());
+        self.repo.save(&des).await?;
+        Ok(des)
+    }
+}
 
 register_command_handler!(UpdateDesignation, AppDeps, |d: &AppDeps| {
-    let repo = d.designation_repo.clone();
-    move |cmd: UpdateDesignation| {
-        let repo = repo.clone();
-        async move {
-            let mut desig = repo.find_by_id(cmd.id).await?
-                .ok_or_else(|| AppError::not_found(format!("Designation {} not found", cmd.id)))?;
-            desig.designation_name = cmd.designation_name;
-            desig.level = cmd.level;
-            desig.updated_at = Some(chrono::Utc::now());
-            repo.save(&desig).await?;
-            Ok(desig)
-        }
-    }
+    UpdateDesignationHandler { repo: d.designation_repo.clone() }
 });
+
+// ── GetDesignation ────────────────────────────────────────────────────────────
+
+pub struct GetDesignationHandler {
+    repo: Arc<dyn DesignationRepository>,
+}
+
+#[async_trait]
+impl QueryHandler<GetDesignation> for GetDesignationHandler {
+    async fn handle(&self, q: GetDesignation) -> AppResult<Option<Designation>> {
+        self.repo.find_by_id(q.id).await
+    }
+}
 
 register_query_handler!(GetDesignation, AppDeps, |d: &AppDeps| {
-    let repo = d.designation_repo.clone();
-    move |q: GetDesignation| {
-        let repo = repo.clone();
-        async move { repo.find_by_id(q.id).await }
-    }
+    GetDesignationHandler { repo: d.designation_repo.clone() }
 });
 
-register_query_handler!(ListDesignations, AppDeps, |d: &AppDeps| {
-    let repo = d.designation_repo.clone();
-    move |_q: ListDesignations| {
-        let repo = repo.clone();
-        async move { repo.get_all().await }
+// ── ListDesignations ──────────────────────────────────────────────────────────
+
+pub struct ListDesignationsHandler {
+    repo: Arc<dyn DesignationRepository>,
+}
+
+#[async_trait]
+impl QueryHandler<ListDesignations> for ListDesignationsHandler {
+    async fn handle(&self, _q: ListDesignations) -> AppResult<Vec<Designation>> {
+        self.repo.get_all().await
     }
+}
+
+register_query_handler!(ListDesignations, AppDeps, |d: &AppDeps| {
+    ListDesignationsHandler { repo: d.designation_repo.clone() }
 });

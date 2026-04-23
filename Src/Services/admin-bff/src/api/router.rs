@@ -20,6 +20,7 @@ use crate::api::rest::employees;
 use crate::api::rest::orders;
 use crate::api::rest::products;
 use crate::api::rest::shared;
+use crate::api::rest::sales;
 use crate::api::rest::suppliers;
 use crate::application::state::AppState;
 use ddd_bff::middleware::axum_auth::jwt_auth_layer;
@@ -208,6 +209,32 @@ pub async fn build_router(state: AppState) -> Router {
         .route("/admin/purchase-orders/{id}/submit", put(suppliers::submit_purchase_order))
         .route("/admin/purchase-orders/{id}/cancel", put(suppliers::cancel_purchase_order));
 
+    // Sales + Returns (REST → gRPC pass-through)
+    let sales_routes = Router::new()
+        // Sales
+        .route("/admin/sales", post(sales::create_sale).get(sales::list_sales))
+        .route("/admin/sales/{sale_id}", get(sales::get_sale))
+        .route("/admin/sales/by-receipt/{receipt_number}", get(sales::get_sale_by_receipt))
+        .route("/admin/sales/by-store/{store_id}", get(sales::get_sales_by_store))
+        .route("/admin/sales/by-employee/{employee_id}", get(sales::get_sales_by_employee))
+        .route("/admin/sales/by-customer/{customer_id}", get(sales::get_sales_by_customer))
+        .route("/admin/sales/{sale_id}/details", post(sales::add_sale_detail))
+        .route("/admin/sales/{sale_id}/details/{sale_detail_id}", put(sales::update_sale_detail).delete(sales::remove_sale_detail))
+        .route("/admin/sales/{sale_id}/discounts", post(sales::apply_discount))
+        .route("/admin/sales/{sale_id}/complete", put(sales::complete_sale))
+        .route("/admin/sales/{sale_id}/cancel", put(sales::cancel_sale))
+        .route("/admin/sales/{sale_id}/status", put(sales::update_sale_status))
+        .route("/admin/sales/{sale_id}/receipt-url", get(sales::get_sale_receipt_url))
+        .route("/admin/sales/{sale_id}/receipt", post(sales::upload_sale_receipt))
+        // Returns
+        .route("/admin/returns", post(sales::create_return))
+        .route("/admin/returns/{return_id}", get(sales::get_return))
+        .route("/admin/returns/{return_id}/details", post(sales::add_return_detail))
+        .route("/admin/returns/{return_id}/process", put(sales::process_return))
+        .route("/admin/returns/by-sale/{sale_id}", get(sales::get_returns_by_sale))
+        .route("/admin/returns/by-employee/{employee_id}", get(sales::get_returns_by_employee))
+        .route("/admin/returns/by-customer/{customer_id}", get(sales::get_returns_by_customer));
+
     // Auth (REST → gRPC pass-through)
     let auth_routes = Router::new()
         // Auth flows
@@ -246,6 +273,7 @@ pub async fn build_router(state: AppState) -> Router {
         .merge(employee_routes)
         .merge(supplier_routes)
         .merge(catalog_routes)
+        .merge(sales_routes)
         // Supply AppState to all admin handlers before applying layers that expect Router<()>
         .with_state(state.clone());
         

@@ -7,232 +7,249 @@ use crate::domain::ids::{BrandId, CategoryId, ProductId, ProductImageId, Product
 
 // ── Product ───────────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateProduct {
-        sku:         String,
-        name:        String,
-        category_id: i32,
-        base_price:  f64,
-        cost_price:  f64,
-        description: Option<String>,
-        is_taxable:  bool,
-    } -> Product
+pub struct CreateProduct {
+    pub sku:         String,
+    pub name:        String,
+    pub category_id: i32,
+    pub base_price:  f64,
+    pub cost_price:  f64,
+    pub description: Option<String>,
+    pub is_taxable:  bool,
 }
+impl_command!(CreateProduct, Product);
 
-impl_command! {
-    UpdateProduct {
-        id:          ProductId,
-        name:        String,
-        category_id: i32,
-        base_price:  f64,
-        cost_price:  f64,
-        is_taxable:  bool,
-        description: Option<String>,
-    } -> Product
+pub struct UpdateProduct {
+    pub id:          ProductId,
+    pub name:        String,
+    pub category_id: i32,
+    pub base_price:  f64,
+    pub cost_price:  f64,
+    pub is_taxable:  bool,
+    pub description: Option<String>,
 }
+impl_command!(UpdateProduct, Product);
 
-impl_command! { DiscontinueProduct  { id: ProductId } -> Product }
-impl_command! { ReactivateProduct   { id: ProductId } -> Product }
-
-impl_command! {
-    UpdateProductPricing { id: ProductId, price: f64 } -> Product
+pub struct DiscontinueProduct {
+    pub id: ProductId,
 }
+impl_command!(DiscontinueProduct, Product);
 
-impl_command! {
-    AssignProductBrand { id: ProductId, brand_id: Option<Uuid> } -> Product
+pub struct ReactivateProduct {
+    pub id: ProductId,
 }
+impl_command!(ReactivateProduct, Product);
 
-impl_command! {
-    SetProductDimensions {
-        id:          ProductId,
-        weight_grams: Option<i32>,
-        width_cm:    Option<i32>,
-        height_cm:   Option<i32>,
-        depth_cm:    Option<i32>,
-    } -> Product
+pub struct UpdateProductPricing {
+    pub id:    ProductId,
+    pub price: f64,
 }
+impl_command!(UpdateProductPricing, Product);
 
-impl_command! {
-    SetProductSpecifications {
-        id:    ProductId,
-        specs: serde_json::Value,
-    } -> Product
+pub struct AssignProductBrand {
+    pub id:       ProductId,
+    pub brand_id: Option<Uuid>,
 }
+impl_command!(AssignProductBrand, Product);
 
-impl_command! {
-    SetProductTags { id: ProductId, tags: Vec<String> } -> Product
+pub struct SetProductDimensions {
+    pub id:           ProductId,
+    pub weight_grams: Option<i32>,
+    pub width_cm:     Option<i32>,
+    pub height_cm:    Option<i32>,
+    pub depth_cm:     Option<i32>,
 }
+impl_command!(SetProductDimensions, Product);
 
-impl_command! {
-    SetProductTaxConfigurations {
-        id:             ProductId,
-        tax_config_ids: Vec<String>,
-    } -> Product
+pub struct SetProductSpecifications {
+    pub id:    ProductId,
+    pub specs: serde_json::Value,
 }
+impl_command!(SetProductSpecifications, Product);
 
-impl_command! {
-    AddProductVariant {
-        product_id:          ProductId,
-        sku:                 String,
-        attributes_json:     String,
-        price_override:      Option<f64>,
-        description:         Option<String>,
-        cost_price_override: Option<f64>,
-        barcode:             Option<String>,
-        barcode_type:        Option<String>,
-        weight_grams:        Option<i32>,
-        width_cm:            Option<i32>,
-        height_cm:           Option<i32>,
-        depth_cm:            Option<i32>,
-    } -> Product
+pub struct SetProductTags {
+    pub id:   ProductId,
+    pub tags: Vec<String>,
 }
+impl_command!(SetProductTags, Product);
 
-impl_command! {
-    UpdateProductVariant {
-        product_id:          ProductId,
-        variant_id:          ProductVariantId,
-        sku:                 String,
-        attributes_json:     String,
-        price_override:      Option<f64>,
-        description:         Option<String>,
-        is_active:           bool,
-        cost_price_override: Option<f64>,
-        barcode:             Option<String>,
-        barcode_type:        Option<String>,
-        weight_grams:        Option<i32>,
-        width_cm:            Option<i32>,
-        height_cm:           Option<i32>,
-        depth_cm:            Option<i32>,
-    } -> Product
+pub struct SetProductTaxConfigurations {
+    pub id:             ProductId,
+    pub tax_config_ids: Vec<String>,
 }
+impl_command!(SetProductTaxConfigurations, Product);
 
-impl_command! {
-    RemoveProductVariant { product_id: ProductId, variant_id: ProductVariantId } -> Product
+pub struct AddProductVariant {
+    pub product_id:          ProductId,
+    pub sku:                 String,
+    pub attributes_json:     String,
+    pub price_override:      Option<f64>,
+    pub description:         Option<String>,
+    pub cost_price_override: Option<f64>,
+    pub barcode:             Option<String>,
+    pub barcode_type:        Option<String>,
+    pub weight_grams:        Option<i32>,
+    pub width_cm:            Option<i32>,
+    pub height_cm:           Option<i32>,
+    pub depth_cm:            Option<i32>,
 }
+impl_command!(AddProductVariant, Product);
 
-impl_command! {
-    SetDefaultVariant { product_id: ProductId, variant_id: ProductVariantId } -> Product
+pub struct UpdateProductVariant {
+    pub product_id:          ProductId,
+    pub variant_id:          ProductVariantId,
+    pub sku:                 String,
+    pub attributes_json:     String,
+    pub price_override:      Option<f64>,
+    pub description:         Option<String>,
+    pub is_active:           bool,
+    pub cost_price_override: Option<f64>,
+    pub barcode:             Option<String>,
+    pub barcode_type:        Option<String>,
+    pub weight_grams:        Option<i32>,
+    pub width_cm:            Option<i32>,
+    pub height_cm:           Option<i32>,
+    pub depth_cm:            Option<i32>,
 }
+impl_command!(UpdateProductVariant, Product);
 
-// ── Product image (presigned workflow) ────────────────────────────────────────
-
-impl_command! {
-    RequestProductImageUploadUrl {
-        product_id:   ProductId,
-        file_name:    String,
-        content_type: String,
-        is_main:      bool,
-        sort_order:   i32,
-        alt_text:     Option<String>,
-    } -> (String, String, String)  // (upload_url, object_name, expires_at)
+pub struct RemoveProductVariant {
+    pub product_id: ProductId,
+    pub variant_id: ProductVariantId,
 }
+impl_command!(RemoveProductVariant, Product);
 
-impl_command! {
-    ConfirmProductImageUpload {
-        product_id:   ProductId,
-        object_name:  String,
-        file_name:    String,
-        content_type: String,
-        is_main:      bool,
-        sort_order:   i32,
-        alt_text:     Option<String>,
-    } -> Product
+pub struct SetDefaultVariant {
+    pub product_id: ProductId,
+    pub variant_id: ProductVariantId,
 }
+impl_command!(SetDefaultVariant, Product);
 
-impl_command! {
-    DeleteProductImage { product_id: ProductId, image_id: ProductImageId } -> Product
+pub struct RequestProductImageUploadUrl {
+    pub product_id:   ProductId,
+    pub file_name:    String,
+    pub content_type: String,
+    pub is_main:      bool,
+    pub sort_order:   i32,
+    pub alt_text:     Option<String>,
 }
+impl_command!(RequestProductImageUploadUrl, (String, String, String));
+
+pub struct ConfirmProductImageUpload {
+    pub product_id:   ProductId,
+    pub object_name:  String,
+    pub file_name:    String,
+    pub content_type: String,
+    pub is_main:      bool,
+    pub sort_order:   i32,
+    pub alt_text:     Option<String>,
+}
+impl_command!(ConfirmProductImageUpload, Product);
+
+pub struct DeleteProductImage {
+    pub product_id: ProductId,
+    pub image_id:   ProductImageId,
+}
+impl_command!(DeleteProductImage, Product);
 
 // ── Category ──────────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateCategory {
-        name:               String,
-        description:        Option<String>,
-        parent_category_id: Option<i32>,
-    } -> ProductCategory
+pub struct CreateCategory {
+    pub name:               String,
+    pub description:        Option<String>,
+    pub parent_category_id: Option<i32>,
 }
+impl_command!(CreateCategory, ProductCategory);
 
-impl_command! {
-    UpdateCategory {
-        id:                 CategoryId,
-        name:               String,
-        description:        Option<String>,
-        parent_category_id: Option<i32>,
-    } -> ProductCategory
+pub struct UpdateCategory {
+    pub id:                 CategoryId,
+    pub name:               String,
+    pub description:        Option<String>,
+    pub parent_category_id: Option<i32>,
 }
+impl_command!(UpdateCategory, ProductCategory);
 
-impl_command! {
-    DeleteCategory { id: CategoryId } -> ()
+pub struct DeleteCategory {
+    pub id: CategoryId,
 }
+impl_command!(DeleteCategory, ());
 
-// ── Category image (presigned workflow) ──────────────────────────────────────
-
-impl_command! {
-    RequestCategoryImageUploadUrl {
-        category_id:  CategoryId,
-        file_name:    String,
-        content_type: String,
-    } -> (String, String, String)  // (upload_url, object_name, expires_at)
+pub struct RequestCategoryImageUploadUrl {
+    pub category_id:  CategoryId,
+    pub file_name:    String,
+    pub content_type: String,
 }
+impl_command!(RequestCategoryImageUploadUrl, (String, String, String));
 
-impl_command! {
-    ConfirmCategoryImageUpload {
-        category_id: CategoryId,
-        object_name: String,
-        public_url:  String,
-    } -> ProductCategory
+pub struct ConfirmCategoryImageUpload {
+    pub category_id: CategoryId,
+    pub object_name: String,
+    pub public_url:  String,
 }
+impl_command!(ConfirmCategoryImageUpload, ProductCategory);
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateBrand {
-        name:        String,
-        description: Option<String>,
-        website:     Option<String>,
-    } -> Brand
+pub struct CreateBrand {
+    pub name:        String,
+    pub description: Option<String>,
+    pub website:     Option<String>,
 }
+impl_command!(CreateBrand, Brand);
 
-impl_command! {
-    UpdateBrand {
-        id:          BrandId,
-        name:        String,
-        description: Option<String>,
-        website:     Option<String>,
-    } -> Brand
+pub struct UpdateBrand {
+    pub id:          BrandId,
+    pub name:        String,
+    pub description: Option<String>,
+    pub website:     Option<String>,
 }
+impl_command!(UpdateBrand, Brand);
 
-impl_command! { ActivateBrand   { id: BrandId } -> Brand }
-impl_command! { DeactivateBrand { id: BrandId } -> Brand }
+pub struct ActivateBrand {
+    pub id: BrandId,
+}
+impl_command!(ActivateBrand, Brand);
+
+pub struct DeactivateBrand {
+    pub id: BrandId,
+}
+impl_command!(DeactivateBrand, Brand);
 
 // ── Tax configuration ─────────────────────────────────────────────────────────
 
-impl_command! {
-    CreateTaxConfiguration {
-        name:           String,
-        code:           String,
-        tax_type:       String,
-        tax_rate:       f64,
-        location_id:    i32,
-        category_id:    Option<i32>,
-        effective_date: DateTime<Utc>,
-        expiry_date:    Option<DateTime<Utc>>,
-    } -> TaxConfiguration
+pub struct CreateTaxConfiguration {
+    pub name:           String,
+    pub code:           String,
+    pub tax_type:       String,
+    pub tax_rate:       f64,
+    pub location_id:    i32,
+    pub category_id:    Option<i32>,
+    pub effective_date: DateTime<Utc>,
+    pub expiry_date:    Option<DateTime<Utc>>,
 }
+impl_command!(CreateTaxConfiguration, TaxConfiguration);
 
-impl_command! {
-    UpdateTaxConfiguration {
-        id:             TaxConfigId,
-        name:           String,
-        code:           String,
-        tax_type:       String,
-        tax_rate:       f64,
-        effective_date: DateTime<Utc>,
-        expiry_date:    Option<DateTime<Utc>>,
-    } -> TaxConfiguration
+pub struct UpdateTaxConfiguration {
+    pub id:             TaxConfigId,
+    pub name:           String,
+    pub code:           String,
+    pub tax_type:       String,
+    pub tax_rate:       f64,
+    pub effective_date: DateTime<Utc>,
+    pub expiry_date:    Option<DateTime<Utc>>,
 }
+impl_command!(UpdateTaxConfiguration, TaxConfiguration);
 
-impl_command! { ActivateTaxConfiguration   { id: TaxConfigId } -> TaxConfiguration }
-impl_command! { DeactivateTaxConfiguration { id: TaxConfigId } -> TaxConfiguration }
-impl_command! { DeleteTaxConfiguration     { id: TaxConfigId } -> () }
+pub struct ActivateTaxConfiguration {
+    pub id: TaxConfigId,
+}
+impl_command!(ActivateTaxConfiguration, TaxConfiguration);
+
+pub struct DeactivateTaxConfiguration {
+    pub id: TaxConfigId,
+}
+impl_command!(DeactivateTaxConfiguration, TaxConfiguration);
+
+pub struct DeleteTaxConfiguration {
+    pub id: TaxConfigId,
+}
+impl_command!(DeleteTaxConfiguration, ());

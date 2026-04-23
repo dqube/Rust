@@ -8,5 +8,6 @@ pub mod customers;
 pub mod employees;
 pub mod orders;
 pub mod products;
+pub mod sales;
 pub mod shared;
 pub mod suppliers;

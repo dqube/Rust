@@ -226,11 +226,11 @@ impl CustomerService for CustomerGrpcService {
             .await
             .map_err(|e| e.to_grpc_status())?;
         Ok(Response::new(ListCustomersResponse {
-            items: page.items.iter().map(to_customer_summary).collect(),
-            total: page.total,
-            page: page.page,
-            per_page: page.per_page,
-            total_pages: page.total_pages,
+            items: page.items().iter().map(to_customer_summary).collect(),
+            total: page.total(),
+            page: page.page(),
+            per_page: page.per_page(),
+            total_pages: page.total_pages(),
         }))
     }
 
@@ -548,12 +548,12 @@ impl CustomerService for CustomerGrpcService {
                 } else {
                     Some(r.preferred_currency)
                 },
-                tax_id: if r.tax_id.is_empty() { None } else { Some(r.tax_id) },
+                tax_id: if r.tax_id.is_empty() { None } else { Some(r.tax_id.clone()) },
                 set_tax_id: !r.tax_id.is_empty(),
                 company_registration_number: if r.company_registration_number.is_empty() {
                     None
                 } else {
-                    Some(r.company_registration_number)
+                    Some(r.company_registration_number.clone())
                 },
                 set_company_registration_number: !r.company_registration_number.is_empty(),
             })

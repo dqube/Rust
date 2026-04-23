@@ -42,3 +42,7 @@ pub mod proto_supplier {
 pub mod proto_catalog {
     tonic::include_proto!("catalog.v1");
 }
+
+pub mod proto_sales {
+    tonic::include_proto!("sales.v1");
+}

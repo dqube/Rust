@@ -1,0 +1,39 @@
+[package]
+name = "inventory-service"
+version.workspace = true
+edition.workspace = true
+description = "Inventory microservice migrated to the workspace DDD architecture."
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "inventory-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel = { workspace = true }
+ddd-domain = { workspace = true }
+ddd-application = { workspace = true }
+ddd-infrastructure = { workspace = true, features = ["postgres"] }
+ddd-api = { workspace = true, features = ["grpc"] }
+
+tonic = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web = { workspace = true }
+prost = { workspace = true }
+
+sea-orm = { workspace = true }
+sea-orm-migration = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+inventory = { workspace = true }
+uuid = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }

@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+service InventoryGrpc {
+  rpc CreateInventoryItem (CreateInventoryItemRequest) returns (CreateInventoryItemResponse);
+  rpc GetInventoryItem (GetInventoryItemRequest) returns (GetInventoryItemResponse);
+  rpc ListInventoryItems (ListInventoryItemsRequest) returns (ListInventoryItemsResponse);
+  rpc GetInventoryByStore (GetInventoryByStoreRequest) returns (ListInventoryItemsResponse);
+  rpc GetInventoryByProduct (GetInventoryByProductRequest) returns (GetInventoryByProductResponse);
+  rpc UpdateInventoryQuantity (UpdateInventoryQuantityRequest) returns (UpdateInventoryQuantityResponse);
+  rpc AdjustInventoryQuantity (AdjustInventoryQuantityRequest) returns (AdjustInventoryQuantityResponse);
+  rpc ReserveStock (ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock (ReleaseStockRequest) returns (ReleaseStockResponse);
+  rpc RestockInventory (RestockInventoryRequest) returns (RestockInventoryResponse);
+  rpc CreateStockMovement (CreateStockMovementRequest) returns (CreateStockMovementResponse);
+  rpc ListStockMovements (ListStockMovementsRequest) returns (ListStockMovementsResponse);
+  rpc GetLowStockItems (GetLowStockItemsRequest) returns (ListInventoryItemsResponse);
+  rpc GetOutOfStockItems (GetOutOfStockItemsRequest) returns (ListInventoryItemsResponse);
+  rpc UpdateReorderLevel (UpdateReorderLevelRequest) returns (UpdateReorderLevelResponse);
+}
+
+message InventoryItemInfo {
+  string inventory_item_id = 1;
+  string product_id = 2;
+  string store_id = 3;
+  int32 quantity = 4;
+  int32 reserved_quantity = 5;
+  int32 available_quantity = 6;
+  int32 reorder_level = 7;
+  bool is_low_stock = 8;
+  bool is_out_of_stock = 9;
+  string last_restock_date = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  string product_variant_id = 13;
+}
+
+message StockMovementInfo {
+  string stock_movement_id = 1;
+  string product_id = 2;
+  string store_id = 3;
+  int32 quantity_change = 4;
+  string movement_type = 5;
+  string movement_date = 6;
+  string employee_id = 7;
+  string reference_id = 8;
+  string notes = 9;
+  string created_at = 10;
+}
+
+message CreateInventoryItemRequest {
+  string product_id = 1;
+  string store_id = 2;
+  int32 initial_quantity = 3;
+  int32 reorder_level = 4;
+  string product_variant_id = 5;
+}
+
+message CreateInventoryItemResponse {
+  string inventory_item_id = 1;
+}
+
+message GetInventoryItemRequest {
+  string inventory_item_id = 1;
+}
+
+message GetInventoryItemResponse {
+  bool found = 1;
+  InventoryItemInfo item = 2;
+}
+
+message ListInventoryItemsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListInventoryItemsResponse {
+  repeated InventoryItemInfo items = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetInventoryByStoreRequest {
+  string store_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message GetInventoryByProductRequest {
+  string product_id = 1;
+}
+
+message GetInventoryByProductResponse {
+  repeated InventoryItemInfo items = 1;
+}
+
+message UpdateInventoryQuantityRequest {
+  string inventory_item_id = 1;
+  int32 new_quantity = 2;
+}
+
+message UpdateInventoryQuantityResponse {}
+
+message AdjustInventoryQuantityRequest {
+  string inventory_item_id = 1;
+  int32 delta = 2;
+}
+
+message AdjustInventoryQuantityResponse {}
+
+message ReserveStockRequest {
+  string inventory_item_id = 1;
+  int32 quantity = 2;
+}
+
+message ReserveStockResponse {}
+
+message ReleaseStockRequest {
+  string inventory_item_id = 1;
+  int32 quantity = 2;
+}
+
+message ReleaseStockResponse {}
+
+message RestockInventoryRequest {
+  string inventory_item_id = 1;
+  int32 quantity_added = 2;
+}
+
+message RestockInventoryResponse {}
+
+message CreateStockMovementRequest {
+  string product_id = 1;
+  string store_id = 2;
+  int32 quantity_change = 3;
+  string movement_type = 4;
+  string employee_id = 5;
+  string reference_id = 6;
+  string notes = 7;
+  string product_variant_id = 8;
+}
+
+message CreateStockMovementResponse {
+  string stock_movement_id = 1;
+}
+
+message ListStockMovementsRequest {
+  string product_id = 1;
+  string store_id = 2;
+  string from_date = 3;
+  string to_date = 4;
+  string movement_type = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message ListStockMovementsResponse {
+  repeated StockMovementInfo items = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetLowStockItemsRequest {
+  string store_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message GetOutOfStockItemsRequest {
+  string store_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message UpdateReorderLevelRequest {
+  string inventory_item_id = 1;
+  int32 new_reorder_level = 2;
+}
+
+message UpdateReorderLevelResponse {}

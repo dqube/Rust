@@ -17,6 +17,7 @@ members = [
     "Src/Services/catalog-service",
     "Src/Services/sales-service",
     "Src/Services/store-service",
+    "Src/Services/inventory-service",
 ]
 resolver = "2"
 

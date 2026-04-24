@@ -41,15 +41,15 @@ fn parse_opt_uuid(s: &str) -> Option<Uuid> {
 }
 
 fn parse_sale_id(s: &str) -> Result<SaleId, Status> {
-    Ok(SaleId(parse_uuid(s, "sale_id")?))
+    Ok(SaleId::from_uuid(parse_uuid(s, "sale_id")?))
 }
 
 fn parse_return_id(s: &str) -> Result<ReturnId, Status> {
-    Ok(ReturnId(parse_uuid(s, "return_id")?))
+    Ok(ReturnId::from_uuid(parse_uuid(s, "return_id")?))
 }
 
 fn parse_sale_detail_id(s: &str) -> Result<SaleDetailId, Status> {
-    Ok(SaleDetailId(parse_uuid(s, "sale_detail_id")?))
+    Ok(SaleDetailId::from_uuid(parse_uuid(s, "sale_detail_id")?))
 }
 
 fn parse_decimal(s: &str) -> rust_decimal::Decimal {

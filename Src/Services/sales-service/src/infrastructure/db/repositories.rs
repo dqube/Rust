@@ -42,8 +42,8 @@ fn from_utc(dt: DateTime<Utc>) -> sea_orm::prelude::DateTimeWithTimeZone {
 
 fn model_to_sale_detail(m: sale_detail::Model) -> SaleDetail {
     SaleDetail {
-        id:               SaleDetailId(m.id),
-        sale_id:          SaleId(m.sale_id),
+        id:               SaleDetailId::from_uuid(m.id),
+        sale_id:          SaleId::from_uuid(m.sale_id),
         product_id:       m.product_id,
         variant_id:       m.variant_id,
         quantity:         m.quantity,
@@ -57,9 +57,9 @@ fn model_to_sale_detail(m: sale_detail::Model) -> SaleDetail {
 
 fn model_to_applied_discount(m: applied_discount::Model) -> AppliedDiscount {
     AppliedDiscount {
-        id:              AppliedDiscountId(m.id),
-        sale_id:         SaleId(m.sale_id),
-        sale_detail_id:  m.sale_detail_id.map(SaleDetailId),
+        id:              AppliedDiscountId::from_uuid(m.id),
+        sale_id:         SaleId::from_uuid(m.sale_id),
+        sale_detail_id:  m.sale_detail_id.map(SaleDetailId::from_uuid),
         campaign_id:     m.campaign_id,
         rule_id:         m.rule_id,
         discount_amount: m.discount_amount,
@@ -72,8 +72,13 @@ fn model_to_sale(m: sale::Model, details: Vec<SaleDetail>, discounts: Vec<Applie
         .and_then(|v| serde_json::from_value::<Address>(v).ok());
     let billing_address = m.billing_address
         .and_then(|v| serde_json::from_value::<Address>(v).ok());
+    let created = to_utc(m.created_at);
     Sale {
-        id:                     SaleId(m.id),
+        id:                     SaleId::from_uuid(m.id),
+        version:                0,
+        created_at:             created,
+        updated_at:             created,
+        domain_events:          Vec::new(),
         store_id:               m.store_id,
         employee_id:            m.employee_id,
         customer_id:            m.customer_id,
@@ -90,7 +95,6 @@ fn model_to_sale(m: sale::Model, details: Vec<SaleDetail>, discounts: Vec<Applie
         billing_address,
         payment_transaction_id: m.payment_transaction_id,
         receipt_object_name:    m.receipt_object_name,
-        created_at:             to_utc(m.created_at),
         sale_details:           details,
         applied_discounts:      discounts,
     }
@@ -98,8 +102,8 @@ fn model_to_sale(m: sale::Model, details: Vec<SaleDetail>, discounts: Vec<Applie
 
 fn model_to_return_detail(m: return_detail::Model) -> ReturnDetail {
     ReturnDetail {
-        id:         ReturnDetailId(m.id),
-        return_id:  ReturnId(m.return_id),
+        id:         ReturnDetailId::from_uuid(m.id),
+        return_id:  ReturnId::from_uuid(m.return_id),
         product_id: m.product_id,
         quantity:   m.quantity,
         reason:     ReturnReason::from_str(&m.reason).unwrap(),
@@ -109,14 +113,18 @@ fn model_to_return_detail(m: return_detail::Model) -> ReturnDetail {
 }
 
 fn model_to_return(m: return_entity::Model, details: Vec<ReturnDetail>) -> Return {
+    let created = to_utc(m.created_at);
     Return {
-        id:             ReturnId(m.id),
-        sale_id:        SaleId(m.sale_id),
+        id:             ReturnId::from_uuid(m.id),
+        version:        0,
+        created_at:     created,
+        updated_at:     created,
+        domain_events:  Vec::new(),
+        sale_id:        SaleId::from_uuid(m.sale_id),
         return_date:    to_utc(m.return_date),
         employee_id:    m.employee_id,
         customer_id:    m.customer_id,
         total_refund:   m.total_refund,
-        created_at:     to_utc(m.created_at),
         return_details: details,
     }
 }
@@ -124,7 +132,7 @@ fn model_to_return(m: return_entity::Model, details: Vec<ReturnDetail>) -> Retur
 fn model_to_saga(m: order_saga::Model) -> OrderSaga {
     let items: Vec<SagaOrderItem> = serde_json::from_value(m.items).unwrap_or_default();
     OrderSaga {
-        order_id:       SaleId(m.order_id),
+        order_id:       SaleId::from_uuid(m.order_id),
         order_number:   m.order_number,
         customer_id:    m.customer_id,
         store_id:       m.store_id,
@@ -146,20 +154,20 @@ pub struct PgSaleRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl SaleRepository for PgSaleRepository {
     async fn find_by_id(&self, id: SaleId) -> Result<Option<Sale>, AppError> {
-        let Some(m) = sale::Entity::find_by_id(id.0)
+        let Some(m) = sale::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)? else { return Ok(None); };
         Ok(Some(model_to_sale(m, vec![], vec![])))
     }
 
     async fn find_with_details(&self, id: SaleId) -> Result<Option<Sale>, AppError> {
-        let Some(m) = sale::Entity::find_by_id(id.0)
+        let Some(m) = sale::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)? else { return Ok(None); };
         let details = sale_detail::Entity::find()
-            .filter(sale_detail::Column::SaleId.eq(id.0))
+            .filter(sale_detail::Column::SaleId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(model_to_sale_detail).collect();
         let discounts = applied_discount::Entity::find()
-            .filter(applied_discount::Column::SaleId.eq(id.0))
+            .filter(applied_discount::Column::SaleId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(model_to_applied_discount).collect();
         Ok(Some(model_to_sale(m, details, discounts)))
@@ -169,13 +177,13 @@ impl SaleRepository for PgSaleRepository {
         let Some(m) = sale::Entity::find()
             .filter(sale::Column::ReceiptNumber.eq(receipt.to_string()))
             .one(&*self.0).await.map_err(db_err)? else { return Ok(None); };
-        let id = SaleId(m.id);
+        let id = SaleId::from_uuid(m.id);
         let details = sale_detail::Entity::find()
-            .filter(sale_detail::Column::SaleId.eq(id.0))
+            .filter(sale_detail::Column::SaleId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(model_to_sale_detail).collect();
         let discounts = applied_discount::Entity::find()
-            .filter(applied_discount::Column::SaleId.eq(id.0))
+            .filter(applied_discount::Column::SaleId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(model_to_applied_discount).collect();
         Ok(Some(model_to_sale(m, details, discounts)))
@@ -233,7 +241,7 @@ impl SaleRepository for PgSaleRepository {
             .map(|a| serde_json::to_value(a).map_err(json_err)).transpose()?;
 
         let active = sale::ActiveModel {
-            id:                     Set(sale.id.0),
+            id:                     Set(sale.id.as_uuid()),
             store_id:               Set(sale.store_id),
             employee_id:            Set(sale.employee_id),
             customer_id:            Set(sale.customer_id),
@@ -273,17 +281,17 @@ impl SaleRepository for PgSaleRepository {
 
         // Replace children
         applied_discount::Entity::delete_many()
-            .filter(applied_discount::Column::SaleId.eq(sale.id.0))
+            .filter(applied_discount::Column::SaleId.eq(sale.id.as_uuid()))
             .exec(&*self.0).await.map_err(db_err)?;
         sale_detail::Entity::delete_many()
-            .filter(sale_detail::Column::SaleId.eq(sale.id.0))
+            .filter(sale_detail::Column::SaleId.eq(sale.id.as_uuid()))
             .exec(&*self.0).await.map_err(db_err)?;
 
         if !sale.sale_details.is_empty() {
             let models: Vec<sale_detail::ActiveModel> = sale.sale_details.iter().map(|d| {
                 sale_detail::ActiveModel {
-                    id:               Set(d.id.0),
-                    sale_id:          Set(d.sale_id.0),
+                    id:               Set(d.id.as_uuid()),
+                    sale_id:          Set(d.sale_id.as_uuid()),
                     product_id:       Set(d.product_id),
                     variant_id:       Set(d.variant_id),
                     quantity:         Set(d.quantity),
@@ -300,9 +308,9 @@ impl SaleRepository for PgSaleRepository {
         if !sale.applied_discounts.is_empty() {
             let models: Vec<applied_discount::ActiveModel> = sale.applied_discounts.iter().map(|d| {
                 applied_discount::ActiveModel {
-                    id:              Set(d.id.0),
-                    sale_id:         Set(d.sale_id.0),
-                    sale_detail_id:  Set(d.sale_detail_id.map(|i| i.0)),
+                    id:              Set(d.id.as_uuid()),
+                    sale_id:         Set(d.sale_id.as_uuid()),
+                    sale_detail_id:  Set(d.sale_detail_id.map(|i| i.as_uuid())),
                     campaign_id:     Set(d.campaign_id),
                     rule_id:         Set(d.rule_id),
                     discount_amount: Set(d.discount_amount),
@@ -323,16 +331,16 @@ pub struct PgReturnRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl ReturnRepository for PgReturnRepository {
     async fn find_by_id(&self, id: ReturnId) -> Result<Option<Return>, AppError> {
-        let Some(m) = return_entity::Entity::find_by_id(id.0)
+        let Some(m) = return_entity::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)? else { return Ok(None); };
         Ok(Some(model_to_return(m, vec![])))
     }
 
     async fn find_with_details(&self, id: ReturnId) -> Result<Option<Return>, AppError> {
-        let Some(m) = return_entity::Entity::find_by_id(id.0)
+        let Some(m) = return_entity::Entity::find_by_id(id.as_uuid())
             .one(&*self.0).await.map_err(db_err)? else { return Ok(None); };
         let details = return_detail::Entity::find()
-            .filter(return_detail::Column::ReturnId.eq(id.0))
+            .filter(return_detail::Column::ReturnId.eq(id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?
             .into_iter().map(model_to_return_detail).collect();
         Ok(Some(model_to_return(m, details)))
@@ -340,7 +348,7 @@ impl ReturnRepository for PgReturnRepository {
 
     async fn get_by_sale(&self, sale_id: SaleId) -> Result<Vec<Return>, AppError> {
         let models = return_entity::Entity::find()
-            .filter(return_entity::Column::SaleId.eq(sale_id.0))
+            .filter(return_entity::Column::SaleId.eq(sale_id.as_uuid()))
             .all(&*self.0).await.map_err(db_err)?;
         Ok(models.into_iter().map(|m| model_to_return(m, vec![])).collect())
     }
@@ -364,8 +372,8 @@ impl ReturnRepository for PgReturnRepository {
 
     async fn save(&self, ret: &mut Return) -> Result<(), AppError> {
         let active = return_entity::ActiveModel {
-            id:           Set(ret.id.0),
-            sale_id:      Set(ret.sale_id.0),
+            id:           Set(ret.id.as_uuid()),
+            sale_id:      Set(ret.sale_id.as_uuid()),
             return_date:  Set(from_utc(ret.return_date)),
             employee_id:  Set(ret.employee_id),
             customer_id:  Set(ret.customer_id),
@@ -384,14 +392,14 @@ impl ReturnRepository for PgReturnRepository {
             .exec(&*self.0).await.map_err(db_err)?;
 
         return_detail::Entity::delete_many()
-            .filter(return_detail::Column::ReturnId.eq(ret.id.0))
+            .filter(return_detail::Column::ReturnId.eq(ret.id.as_uuid()))
             .exec(&*self.0).await.map_err(db_err)?;
 
         if !ret.return_details.is_empty() {
             let models: Vec<return_detail::ActiveModel> = ret.return_details.iter().map(|d| {
                 return_detail::ActiveModel {
-                    id:         Set(d.id.0),
-                    return_id:  Set(d.return_id.0),
+                    id:         Set(d.id.as_uuid()),
+                    return_id:  Set(d.return_id.as_uuid()),
                     product_id: Set(d.product_id),
                     quantity:   Set(d.quantity),
                     reason:     Set(d.reason.as_str().to_string()),
@@ -413,7 +421,7 @@ pub struct PgOrderSagaRepository(pub Arc<DatabaseConnection>);
 #[async_trait]
 impl OrderSagaRepository for PgOrderSagaRepository {
     async fn find_by_order_id(&self, order_id: SaleId) -> Result<Option<OrderSaga>, AppError> {
-        Ok(order_saga::Entity::find_by_id(order_id.0)
+        Ok(order_saga::Entity::find_by_id(order_id.as_uuid())
             .one(&*self.0).await.map_err(db_err)?
             .map(model_to_saga))
     }
@@ -421,7 +429,7 @@ impl OrderSagaRepository for PgOrderSagaRepository {
     async fn save(&self, saga: &mut OrderSaga) -> Result<(), AppError> {
         let items_json = serde_json::to_value(&saga.items).map_err(json_err)?;
         let active = order_saga::ActiveModel {
-            order_id:       Set(saga.order_id.0),
+            order_id:       Set(saga.order_id.as_uuid()),
             order_number:   Set(saga.order_number.clone()),
             customer_id:    Set(saga.customer_id),
             store_id:       Set(saga.store_id),

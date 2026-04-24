@@ -19,7 +19,7 @@ pub async fn handle_order_placed(
     _sale_repo: &Arc<dyn SaleRepository>,
     _outbox:   &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     info!(order_id = %order_id, "OrderSaga started.");
     let items: Vec<SagaOrderItem> = evt.items.iter().map(|i| SagaOrderItem {
         product_id: i.product_id,
@@ -50,7 +50,7 @@ pub async fn handle_stock_reserved(
     _sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     let mut saga = match saga_repo.find_by_order_id(order_id).await? {
         Some(s) => s,
         None    => { warn!(order_id = %order_id, "OrderSaga not found for StockReserved."); return Ok(()); }
@@ -61,7 +61,7 @@ pub async fn handle_stock_reserved(
     saga.updated_at     = Utc::now();
     saga_repo.save(&mut saga).await?;
     let trigger = OrderRefundRequestedIntegrationEvent {
-        order_id:     saga.order_id.0,
+        order_id:     saga.order_id.as_uuid(),
         customer_id:  saga.customer_id,
         total_amount: saga.total,
         reason:       "payment-capture".into(),
@@ -82,7 +82,7 @@ pub async fn handle_stock_reservation_failed(
     _sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     let mut saga = match saga_repo.find_by_order_id(order_id).await? {
         Some(s) => s,
         None    => { warn!(order_id = %order_id, "OrderSaga not found."); return Ok(()); }
@@ -103,7 +103,7 @@ pub async fn handle_payment_captured(
     _sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     let mut saga = match saga_repo.find_by_order_id(order_id).await? {
         Some(s) => s,
         None    => { warn!(order_id = %order_id, "OrderSaga not found."); return Ok(()); }
@@ -114,7 +114,7 @@ pub async fn handle_payment_captured(
     saga.updated_at = Utc::now();
     saga_repo.save(&mut saga).await?;
     let confirmed = OrderConfirmedIntegrationEvent {
-        order_id:     saga.order_id.0,
+        order_id:     saga.order_id.as_uuid(),
         order_number: saga.order_number.clone(),
         customer_id:  saga.customer_id,
         store_id:     saga.store_id,
@@ -138,7 +138,7 @@ pub async fn handle_payment_failed(
     _sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     let mut saga = match saga_repo.find_by_order_id(order_id).await? {
         Some(s) => s,
         None    => { warn!(order_id = %order_id, "OrderSaga not found."); return Ok(()); }
@@ -159,7 +159,7 @@ pub async fn handle_payment_initiation_failed(
     _sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let order_id = SaleId(evt.order_id);
+    let order_id = SaleId::from_uuid(evt.order_id);
     let mut saga = match saga_repo.find_by_order_id(order_id).await? {
         Some(s) => s,
         None    => { warn!(order_id = %order_id, "OrderSaga not found."); return Ok(()); }
@@ -180,7 +180,7 @@ pub async fn handle_payment_refunded(
     sale_repo: &Arc<dyn SaleRepository>,
     outbox:    &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let sale_id = SaleId(evt.sale_id);
+    let sale_id = SaleId::from_uuid(evt.sale_id);
     let mut sale = match sale_repo.find_by_id(sale_id).await? {
         Some(s) => s,
         None    => { info!(sale_id = %sale_id, "Sale not found for PaymentRefunded, skipping."); return Ok(()); }
@@ -189,7 +189,7 @@ pub async fn handle_payment_refunded(
     if sale.cancel(&reason).is_ok() {
         sale_repo.save(&mut sale).await?;
         let evt_out = SaleCancelledIntegrationEvent {
-            sale_id:      sale.id.0,
+            sale_id:      sale.id.as_uuid(),
             reason,
             cancelled_at: Utc::now().to_rfc3339(),
         };
@@ -209,7 +209,7 @@ pub async fn handle_promotion_applied(
     sale_repo: &Arc<dyn SaleRepository>,
     _outbox:   &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
-    let sale_id = SaleId(evt.sale_id);
+    let sale_id = SaleId::from_uuid(evt.sale_id);
     let mut sale = match sale_repo.find_with_details(sale_id).await? {
         Some(s) => s,
         None    => { info!(sale_id = %sale_id, "Sale not found for PromotionApplied, skipping."); return Ok(()); }
@@ -241,7 +241,7 @@ async fn publish_order_cancelled(
     outbox: &Arc<dyn OutboxRepository>,
 ) -> Result<(), AppError> {
     let evt = OrderCancelledIntegrationEvent {
-        order_id:     saga.order_id.0,
+        order_id:     saga.order_id.as_uuid(),
         order_number: saga.order_number.clone(),
         customer_id:  saga.customer_id,
         store_id:     saga.store_id,

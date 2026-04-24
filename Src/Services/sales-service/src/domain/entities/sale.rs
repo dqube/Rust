@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use ddd_domain::{define_aggregate, define_entity, impl_aggregate, impl_aggregate_events};
+use ddd_shared_kernel::DomainEvent;
 
 use crate::domain::enums::{OrderStatus, SalesChannel};
+use crate::domain::events::{SaleCancelled, SaleCompleted, SaleCreated};
 use crate::domain::ids::{AppliedDiscountId, SaleDetailId, SaleId};
 
 // ── Address (value object) ────────────────────────────────────────────────────
@@ -136,7 +138,7 @@ impl Sale {
         channel:        SalesChannel,
     ) -> Self {
         let now = Utc::now();
-        Self {
+        let mut s = Self {
             id: SaleId::new(),
             version: 0,
             domain_events: Vec::new(),
@@ -160,7 +162,14 @@ impl Sale {
             receipt_object_name: None,
             sale_details: Vec::new(),
             applied_discounts: Vec::new(),
-        }
+        };
+        s.record_event(SaleCreated {
+            sale_id:        s.id,
+            store_id:       s.store_id,
+            receipt_number: s.receipt_number.clone(),
+            occurred_at:    now,
+        });
+        s
     }
 
     pub fn place_online_order(
@@ -244,8 +253,10 @@ impl Sale {
     }
 
     pub fn complete(&mut self) {
+        let now = Utc::now();
         self.status = OrderStatus::Completed;
-        self.updated_at = Utc::now();
+        self.updated_at = now;
+        self.record_event(SaleCompleted { sale_id: self.id, occurred_at: now });
     }
 
     pub fn set_addresses(&mut self, shipping: Address, billing: Address) {
@@ -286,8 +297,10 @@ impl Sale {
             OrderStatus::Shipped | OrderStatus::Delivered | OrderStatus::Completed =>
                 Err("Cannot cancel a shipped/delivered/completed order.".into()),
             _ => {
+                let now = Utc::now();
                 self.status = OrderStatus::Cancelled;
-                self.updated_at = Utc::now();
+                self.updated_at = now;
+                self.record_event(SaleCancelled { sale_id: self.id, occurred_at: now });
                 Ok(())
             }
         }
@@ -301,6 +314,10 @@ impl Sale {
     pub fn set_receipt_object_name(&mut self, name: String) {
         self.receipt_object_name = Some(name);
         self.updated_at = Utc::now();
+    }
+
+    pub fn drain_events(&mut self) -> Vec<Box<dyn DomainEvent>> {
+        std::mem::take(&mut self.domain_events)
     }
 
     fn recalculate_totals(&mut self) {

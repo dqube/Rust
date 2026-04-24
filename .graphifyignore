@@ -1,0 +1,7 @@
+.claude/
+.agents/
+.github/
+.vscode/
+GEMINI.md
+target/
+graphify-out/

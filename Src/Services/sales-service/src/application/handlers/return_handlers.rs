@@ -61,15 +61,15 @@ impl CommandHandler<CreateReturn> for CreateReturnHandler {
         self.return_repo.save(&mut ret).await?;
 
         let evt = ReturnCreatedIntegrationEvent {
-            return_id:   ret.id.0,
-            sale_id:     ret.sale_id.0,
+            return_id:   ret.id.as_uuid(),
+            sale_id:     ret.sale_id.as_uuid(),
             employee_id: ret.employee_id,
             customer_id: ret.customer_id,
             return_date: ret.return_date.to_rfc3339(),
         };
         append_outbox(
             &self.outbox,
-            ret.id.0,
+            ret.id.as_uuid(),
             "Return",
             "ReturnCreated",
             ReturnCreatedIntegrationEvent::TOPIC,
@@ -131,13 +131,13 @@ impl CommandHandler<ProcessReturn> for ProcessReturnHandler {
         self.return_repo.save(&mut ret).await?;
 
         let evt = ReturnProcessedIntegrationEvent {
-            return_id:    ret.id.0,
-            sale_id:      ret.sale_id.0,
+            return_id:    ret.id.as_uuid(),
+            sale_id:      ret.sale_id.as_uuid(),
             total_refund: ret.total_refund,
         };
         append_outbox(
             &self.outbox,
-            ret.id.0,
+            ret.id.as_uuid(),
             "Return",
             "ReturnProcessed",
             ReturnProcessedIntegrationEvent::TOPIC,

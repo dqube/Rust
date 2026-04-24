@@ -86,7 +86,7 @@ impl CommandHandler<CreateSale> for CreateSaleHandler {
         self.repo.save(&mut sale).await?;
 
         let evt = SaleCreatedIntegrationEvent {
-            sale_id:          sale.id.0,
+            sale_id:          sale.id.as_uuid(),
             store_id:         sale.store_id,
             employee_id:      sale.employee_id,
             customer_id:      sale.customer_id,
@@ -95,7 +95,7 @@ impl CommandHandler<CreateSale> for CreateSaleHandler {
         };
         append_outbox(
             &self.outbox,
-            sale.id.0,
+            sale.id.as_uuid(),
             "Sale",
             "SaleCreated",
             SaleCreatedIntegrationEvent::TOPIC,
@@ -203,13 +203,13 @@ impl CommandHandler<CompleteSale> for CompleteSaleHandler {
         self.repo.save(&mut sale).await?;
 
         let evt = SaleCompletedIntegrationEvent {
-            sale_id:          sale.id.0,
+            sale_id:          sale.id.as_uuid(),
             total_amount:     sale.total_amount,
             transaction_time: sale.transaction_time.to_rfc3339(),
         };
         append_outbox(
             &self.outbox,
-            sale.id.0,
+            sale.id.as_uuid(),
             "Sale",
             "SaleCompleted",
             SaleCompletedIntegrationEvent::TOPIC,
@@ -238,13 +238,13 @@ impl CommandHandler<CancelSale> for CancelSaleHandler {
         self.repo.save(&mut sale).await?;
 
         let evt = SaleCancelledIntegrationEvent {
-            sale_id:      sale.id.0,
+            sale_id:      sale.id.as_uuid(),
             reason:       cmd.reason,
             cancelled_at: chrono::Utc::now().to_rfc3339(),
         };
         append_outbox(
             &self.outbox,
-            sale.id.0,
+            sale.id.as_uuid(),
             "Sale",
             "SaleCancelled",
             SaleCancelledIntegrationEvent::TOPIC,
@@ -332,7 +332,7 @@ impl CommandHandler<UploadSaleReceipt> for UploadSaleReceiptHandler {
             .extension()
             .and_then(|s| s.to_str())
             .unwrap_or("bin");
-        let object_name = format!("receipts/{}/{}.{}", sale.id.0, Uuid::new_v4(), ext);
+        let object_name = format!("receipts/{}/{}.{}", sale.id.as_uuid(), Uuid::new_v4(), ext);
 
         self.storage
             .upload(&self.bucket, &object_name, &cmd.content_type, cmd.file_content)
@@ -372,7 +372,7 @@ impl CommandHandler<PlaceOrder> for PlaceOrderHandler {
         self.repo.save(&mut sale).await?;
 
         let evt = OrderPlacedIntegrationEvent {
-            order_id:     sale.id.0,
+            order_id:     sale.id.as_uuid(),
             order_number: sale.receipt_number.clone(),
             customer_id:  cmd.customer_id,
             store_id:     cmd.store_id,
@@ -389,7 +389,7 @@ impl CommandHandler<PlaceOrder> for PlaceOrderHandler {
         };
         append_outbox(
             &self.outbox,
-            sale.id.0,
+            sale.id.as_uuid(),
             "Sale",
             "OrderPlaced",
             OrderPlacedIntegrationEvent::TOPIC,

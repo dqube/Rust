@@ -16,6 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 ddd-shared-kernel  = { workspace = true, features = ["validation"] }
+ddd-domain         = { workspace = true }
 ddd-application    = { workspace = true }
 ddd-infrastructure = { workspace = true, features = ["postgres", "nats", "nats-jetstream", "storage"] }
 ddd-api            = { workspace = true, features = ["grpc"] }

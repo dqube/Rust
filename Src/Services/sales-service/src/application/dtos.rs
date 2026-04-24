@@ -53,7 +53,7 @@ pub struct SaleDto {
 
 pub fn map_sale(sale: &Sale) -> SaleDto {
     SaleDto {
-        id:                     sale.id.0,
+        id:                     sale.id.as_uuid(),
         store_id:               sale.store_id,
         employee_id:            sale.employee_id,
         customer_id:            sale.customer_id,
@@ -76,8 +76,8 @@ pub fn map_sale(sale: &Sale) -> SaleDto {
 
 pub fn map_sale_detail(d: &SaleDetail) -> SaleDetailDto {
     SaleDetailDto {
-        id:               d.id.0,
-        sale_id:          d.sale_id.0,
+        id:               d.id.as_uuid(),
+        sale_id:          d.sale_id.as_uuid(),
         product_id:       d.product_id,
         variant_id:       d.variant_id,
         quantity:         d.quantity,
@@ -91,9 +91,9 @@ pub fn map_sale_detail(d: &SaleDetail) -> SaleDetailDto {
 
 pub fn map_applied_discount(d: &AppliedDiscount) -> AppliedDiscountDto {
     AppliedDiscountDto {
-        id:              d.id.0,
-        sale_id:         d.sale_id.0,
-        sale_detail_id:  d.sale_detail_id.map(|i| i.0),
+        id:              d.id.as_uuid(),
+        sale_id:         d.sale_id.as_uuid(),
+        sale_detail_id:  d.sale_detail_id.map(|i| i.as_uuid()),
         campaign_id:     d.campaign_id,
         rule_id:         d.rule_id,
         discount_amount: d.discount_amount,
@@ -126,8 +126,8 @@ pub struct ReturnDto {
 
 pub fn map_return(ret: &Return) -> ReturnDto {
     ReturnDto {
-        id:             ret.id.0,
-        sale_id:        ret.sale_id.0,
+        id:             ret.id.as_uuid(),
+        sale_id:        ret.sale_id.as_uuid(),
         return_date:    ret.return_date,
         employee_id:    ret.employee_id,
         customer_id:    ret.customer_id,
@@ -139,8 +139,8 @@ pub fn map_return(ret: &Return) -> ReturnDto {
 
 pub fn map_return_detail(d: &ReturnDetail) -> ReturnDetailDto {
     ReturnDetailDto {
-        id:         d.id.0,
-        return_id:  d.return_id.0,
+        id:         d.id.as_uuid(),
+        return_id:  d.return_id.as_uuid(),
         product_id: d.product_id,
         quantity:   d.quantity,
         reason:     d.reason.as_str().to_string(),

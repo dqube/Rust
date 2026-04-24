@@ -1,0 +1,214 @@
+syntax = "proto3";
+package store;
+
+// ── Shared ────────────────────────────────────────────────────────────────────
+
+message EmptyResponse {}
+
+// ── Schedule ──────────────────────────────────────────────────────────────────
+
+message ScheduleInfo {
+  int32  day_of_week = 1;
+  string open_time   = 2;
+  string close_time  = 3;
+  bool   is_closed   = 4;
+}
+
+// ── Address / Geolocation ────────────────────────────────────────────────────
+
+message AddressInfo {
+  string street      = 1;
+  string city        = 2;
+  string postal_code = 3;
+  string country     = 4;
+}
+
+message GeolocationInfo {
+  double latitude  = 1;
+  double longitude = 2;
+}
+
+// ── Store messages ────────────────────────────────────────────────────────────
+
+message StoreInfo {
+  int32           store_id        = 1;
+  string          name            = 2;
+  int32           location_id     = 3;
+  AddressInfo     address         = 4;
+  string          phone           = 5;
+  GeolocationInfo geolocation     = 6;
+  repeated ScheduleInfo schedules = 7;
+  repeated string       services  = 8;
+  string          status          = 9;
+  bool            is_operational  = 10;
+  string          logo_url        = 11;
+  string          created_at      = 12;
+  string          updated_at      = 13;
+}
+
+message StoreResponse {
+  bool      found = 1;
+  StoreInfo store = 2;
+}
+
+message ListStoresResponse {
+  repeated StoreInfo items       = 1;
+  int32              total_count = 2;
+  int32              page        = 3;
+  int32              page_size   = 4;
+  int32              total_pages = 5;
+}
+
+message CreateStoreRequest {
+  string name        = 1;
+  int32  location_id = 2;
+  string street      = 3;
+  string city        = 4;
+  string postal_code = 5;
+  string country     = 6;
+  string phone       = 7;
+  double latitude    = 8;
+  double longitude   = 9;
+  repeated ScheduleInfo schedules = 10;
+  repeated string       services  = 11;
+}
+
+message UpdateStoreInformationRequest {
+  int32  store_id    = 1;
+  string name        = 2;
+  string street      = 3;
+  string city        = 4;
+  string postal_code = 5;
+  string country     = 6;
+  string phone       = 7;
+  double latitude    = 8;
+  double longitude   = 9;
+  repeated ScheduleInfo schedules = 10;
+  repeated string       services  = 11;
+}
+
+message ChangeStoreStatusRequest {
+  int32  store_id = 1;
+  string status   = 2;
+}
+
+message GetStoreRequest {
+  int32 store_id = 1;
+}
+
+message ListStoresRequest {
+  int32  page        = 1;
+  int32  page_size   = 2;
+  string search_term = 3;
+  string status      = 4;
+  int32  location_id = 5;
+}
+
+message GetStoreLogoUrlRequest {
+  int32 store_id = 1;
+}
+
+message GetStoreLogoUrlResponse {
+  bool   found = 1;
+  string url   = 2;
+}
+
+message UploadStoreLogoRequest {
+  int32  store_id     = 1;
+  bytes  file_content = 2;
+  string file_name    = 3;
+  string content_type = 4;
+}
+
+message UploadStoreLogoResponse {
+  string logo_url = 1;
+}
+
+message DeleteStoreLogoRequest {
+  int32 store_id = 1;
+}
+
+// ── Register messages ─────────────────────────────────────────────────────────
+
+message RegisterInfo {
+  int32  register_id     = 1;
+  int32  store_id        = 2;
+  string name            = 3;
+  string current_balance = 4;
+  string status          = 5;
+  bool   is_open         = 6;
+  string last_open       = 7;
+  string last_close      = 8;
+  string created_at      = 9;
+  string updated_at      = 10;
+}
+
+message RegisterResponse {
+  bool         found    = 1;
+  RegisterInfo register = 2;
+}
+
+message ListRegistersResponse {
+  repeated RegisterInfo items       = 1;
+  int32                 total_count = 2;
+  int32                 page        = 3;
+  int32                 page_size   = 4;
+  int32                 total_pages = 5;
+}
+
+message CreateRegisterRequest {
+  int32  store_id = 1;
+  string name     = 2;
+}
+
+message OpenRegisterRequest {
+  int32  register_id   = 1;
+  string starting_cash = 2;
+}
+
+message CloseRegisterRequest {
+  int32  register_id = 1;
+  string ending_cash = 2;
+}
+
+message CashAmountRequest {
+  int32  register_id = 1;
+  string amount      = 2;
+  string note        = 3;
+}
+
+message UpdateRegisterNameRequest {
+  int32  register_id = 1;
+  string new_name    = 2;
+}
+
+message GetRegisterRequest {
+  int32 register_id = 1;
+}
+
+message ListRegistersRequest {
+  int32 store_id  = 1;
+  int32 page      = 2;
+  int32 page_size = 3;
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+service StoreGrpc {
+  rpc CreateStore              (CreateStoreRequest)              returns (StoreResponse);
+  rpc UpdateStoreInformation   (UpdateStoreInformationRequest)   returns (StoreResponse);
+  rpc ChangeStoreStatus        (ChangeStoreStatusRequest)        returns (EmptyResponse);
+  rpc GetStore                 (GetStoreRequest)                 returns (StoreResponse);
+  rpc ListStores               (ListStoresRequest)               returns (ListStoresResponse);
+  rpc GetStoreLogoUrl          (GetStoreLogoUrlRequest)          returns (GetStoreLogoUrlResponse);
+  rpc UploadStoreLogo          (UploadStoreLogoRequest)          returns (UploadStoreLogoResponse);
+  rpc DeleteStoreLogo          (DeleteStoreLogoRequest)          returns (EmptyResponse);
+  rpc CreateRegister           (CreateRegisterRequest)           returns (RegisterResponse);
+  rpc OpenRegister             (OpenRegisterRequest)             returns (EmptyResponse);
+  rpc CloseRegister            (CloseRegisterRequest)            returns (EmptyResponse);
+  rpc AddCashToRegister        (CashAmountRequest)               returns (EmptyResponse);
+  rpc RemoveCashFromRegister   (CashAmountRequest)               returns (EmptyResponse);
+  rpc UpdateRegisterName       (UpdateRegisterNameRequest)       returns (RegisterResponse);
+  rpc GetRegister              (GetRegisterRequest)              returns (RegisterResponse);
+  rpc ListRegisters            (ListRegistersRequest)            returns (ListRegistersResponse);
+}

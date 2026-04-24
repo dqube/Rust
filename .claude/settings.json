@@ -1,8 +1,4 @@
 {
-  "skills": [
-    ".agents/skills/caveman/SKILL.md",
-    ".agents/skills/caveman-commit/SKILL.md"
-  ],
   "hooks": {
     "PreToolUse": [
       {

@@ -90,6 +90,145 @@ Handlers self-register via `register_command_handler!` / `register_query_handler
 - Do not add `ddd-domain` or `ddd-application` as dependencies of `ddd-bff` — it depends only on `ddd-shared-kernel`.
 - Do not turn `ddd-bff` into a binary — it is a library; create a named service binary (e.g. `admin-bff`) under `Src/Services/` that consumes it.
 
+## Domain Model Migration Rules (Aggregate / Entity / Value Object)
+
+When migrating a service to the DDD architecture, the domain layer **must** use the macros from `ddd-domain` and `ddd-shared-kernel`. Plain structs are not acceptable for aggregates or entities.
+
+### Aggregate (root — owns its lifecycle and raises domain events)
+
+```rust
+// ✅ DO
+use ddd_domain::{define_aggregate, impl_aggregate, impl_aggregate_events};
+use ddd_shared_kernel::{AppResult, DomainEvent};
+
+define_aggregate!(Store, StoreId, {
+    pub name: String,
+    pub status: StoreStatus,
+    // ... fields
+});
+
+impl_aggregate!(Store, StoreId);
+impl_aggregate_events!(Store, StoreCreated, StoreUpdated);   // all events this root raises
+
+impl Store {
+    pub fn create(name: String, ...) -> AppResult<Self> { ... }  // factory, returns AppResult
+    pub fn update_name(&mut self, name: String) -> AppResult<()> { ... }
+}
+
+// ❌ DON'T
+#[derive(Debug, Clone)]
+pub struct Store {
+    pub id: StoreId,
+    pub name: String,
+    ...
+}
+impl Store {
+    pub fn create(...) -> Self { ... }
+}
+```
+
+### Entity (has identity, owned by an aggregate)
+
+```rust
+// ✅ DO
+use ddd_domain::define_entity;
+
+define_entity!(StoreSchedule, StoreScheduleId, {
+    pub store_id:    StoreId,
+    pub day_of_week: u8,
+    pub open_time:   Option<String>,
+    pub close_time:  Option<String>,
+    pub is_closed:   bool,
+});
+
+impl StoreSchedule {
+    pub fn new(id: StoreScheduleId, store_id: StoreId, ...) -> Self { ... }
+}
+
+// ❌ DON'T
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreSchedule {
+    pub day_of_week: u8,
+    ...
+}
+```
+
+### Value Object (no identity, compared by value)
+
+```rust
+// ✅ DO
+use ddd_shared_kernel::define_value_object;   // or implement PartialEq + Clone manually
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Address {
+    pub street:      String,
+    pub city:        String,
+    pub postal_code: String,
+    pub country:     String,
+}
+
+// Value objects go in the aggregate's field, NOT as a separate entity with an id.
+```
+
+### Domain Events (declared alongside the aggregate)
+
+```rust
+// ✅ DO — in domain/events.rs
+use ddd_shared_kernel::DomainEvent;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreCreated {
+    pub store_id: StoreId,
+    pub name:     String,
+}
+impl DomainEvent for StoreCreated {
+    fn event_type(&self) -> &'static str { "StoreCreated" }
+    fn aggregate_type(&self) -> &'static str { "Store" }
+}
+
+// ❌ DON'T raise events from infrastructure or command handlers directly.
+// Events are raised by aggregate methods and collected via impl_aggregate_events!.
+```
+
+### Repository Port (domain/repositories.rs)
+
+```rust
+// ✅ DO — trait only, no SeaORM/sqlx
+#[async_trait]
+pub trait StoreRepository: Send + Sync {
+    async fn find_by_id(&self, id: StoreId) -> AppResult<Option<Store>>;
+    async fn save(&self, store: &Store) -> AppResult<()>;
+}
+
+// ❌ DON'T put SeaORM models or DB logic here. That belongs in ddd-infrastructure.
+```
+
+### File layout expected after migration
+
+```
+domain/
+  mod.rs
+  ids.rs          ← declare_id!(StoreId); declare_id!(StoreScheduleId);
+  enums.rs        ← StoreStatus, RegisterStatus
+  events.rs       ← StoreCreated, StoreUpdated, ...
+  repositories.rs ← trait StoreRepository, trait RegisterRepository
+  entities/
+    mod.rs
+    store.rs      ← define_aggregate! + impl_aggregate! + impl_aggregate_events! + methods
+    register.rs   ← define_aggregate! or define_entity! depending on ownership
+```
+
+### Migration checklist
+
+- [ ] Every aggregate uses `define_aggregate!` + `impl_aggregate!` + `impl_aggregate_events!`
+- [ ] Every child entity uses `define_entity!`
+- [ ] Inline struct fields that have no identity become value objects (no id, no macro)
+- [ ] `domain/events.rs` exists and all domain events implement `DomainEvent`
+- [ ] `domain/repositories.rs` contains only traits — no `sea_orm`, no `sqlx`, no `Arc`
+- [ ] `domain/ids.rs` uses `declare_id!` for every strongly-typed id
+- [ ] No `Serialize`/`Deserialize` derives on aggregates or entities (only on DTOs and events)
+- [ ] Aggregate factory methods return `AppResult<Self>`, not bare `Self`
+
 ## Verification
 
 Before declaring a task complete, run from the affected crate directory:

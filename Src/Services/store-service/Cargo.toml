@@ -1,0 +1,45 @@
+[package]
+name = "store-service"
+version.workspace = true
+edition.workspace = true
+description = "Store microservice — stores, registers, and schedules (gRPC)."
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "store-service"
+path = "src/main.rs"
+
+[dependencies]
+ddd-shared-kernel  = { workspace = true, features = ["validation"] }
+ddd-domain         = { workspace = true }
+ddd-application    = { workspace = true }
+ddd-infrastructure = { workspace = true, features = ["postgres", "nats", "nats-jetstream", "storage"] }
+ddd-api            = { workspace = true, features = ["grpc"] }
+
+tonic       = { workspace = true }
+tonic-prost = { workspace = true }
+tonic-web   = { workspace = true }
+prost       = { workspace = true }
+
+sea-orm           = { workspace = true, features = ["with-rust_decimal"] }
+sea-orm-migration = { workspace = true }
+sqlx              = { workspace = true }
+
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+tracing      = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-trait  = { workspace = true }
+chrono       = { workspace = true }
+tokio        = { workspace = true }
+inventory    = { workspace = true }
+uuid         = { workspace = true }
+rust_decimal = { workspace = true }
+futures      = { workspace = true }
+bytes        = { workspace = true }
+async-nats   = { workspace = true }
+tower-http   = { workspace = true }
+
+[build-dependencies]
+tonic-prost-build = { workspace = true }
